@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>GasExpress – Cliente</title>
+
+    <link rel="stylesheet" href="base.css">
+    <link rel="stylesheet" href="header.css">
+    <link rel="stylesheet" href="cuenta.css">
+    <link rel="stylesheet" href="footer.css">
+</head>
+
+<body>
+
+    <header>
+        <h2>🔥 GasExpress</h2>
+        <nav>
+            <button>Carrito (0)</button>
+            <button onclick="window.location.href='index.html'">Cerrar sesión</button>
+        </nav>
+    </header>
+
+
+
+    <div class="layout">
+
+        <aside>
+            <h3>Panel del cliente</h3>
+            <button onclick="window.location.href='index.html'">Inicio</button>
+            <button class="active">Catálogo</button>
+            <button>Mis pedidos</button>
+            <button onclick="window.location.href='cuenta.html'">Perfil</button>
+            <button>Soporte</button>
+        </aside>
+
+
+
+        <main>
+
+            <div class="card">
+                <h2>Catálogo de Cilindros</h2>
+                <div class="products">
+                    <div class="product">
+                        <h3>Gas 5 Kg</h3>
+                        <p>$7.500</p>
+                        <button>Agregar al carrito</button>
+                    </div>
+                    <div class="product">
+                        <h3>Gas 11 Kg</h3>
+                        <p>$14.500</p>
+                        <button>Agregar al carrito</button>
+                    </div>
+                    <div class="product">
+                        <h3>Gas 15 Kg</h3>
+                        <p>$19.000</p>
+                        <button>Agregar al carrito</button>
+                    </div>
+                    <div class="product">
+                        <h3>Gas 45 Kg</h3>
+                        <p>$58.000</p>
+                        <button>Agregar al carrito</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Mis pedidos</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Producto</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>#001</td>
+                            <td>Gas 11Kg</td>
+                            <td><span class="status pending">Pendiente</span></td>
+                        </tr>
+                        <tr>
+                            <td>#002</td>
+                            <td>Gas 15Kg</td>
+                            <td><span class="status delivery">En camino</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <h2>Mi Perfil</h2>
+                <input type="text" placeholder="Nombre">
+                <input type="text" placeholder="Dirección">
+                <input type="email" placeholder="Correo">
+                <div style="margin-top:8px;">
+                    <button class="btn-primary">Guardar cambios</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Soporte</h2>
+                <textarea placeholder="Describe tu problema..."></textarea>
+                <div style="margin-top:8px;">
+                    <button class="btn-danger">Enviar</button>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <footer>
+        <div class="container">
+
+            <div class="footer-section">
+                <h3>GasExpress</h3>
+                <p>Distribuyendo gas de forma segura y confiable en todo Chile.</p>
+            </div>
+
+            <div class="footer-section">
+                <h3>Servicios</h3>
+                <ul>
+                    <li>Venta de cilindros</li>
+                    <li>Recambio de gas</li>
+                    <li>Despacho a domicilio</li>
+                    <li>Soporte al cliente</li>
+                </ul>
+            </div>
+
+            <div class="footer-section">
+                <h3>Contacto</h3>
+                <p>Email: contacto@gasexpress.cl</p>
+                <p>Teléfono: +56 2 2000 1234</p>
+            </div>
+
+        </div>
+
+        <div class="copyright">
+            <p>&copy; 2026 GasExpress. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+</body>
+
+</html>

@@ -1,0 +1,83 @@
+
+aside{
+    background:#1e293b;
+    color:white;
+}
+
+aside h3{
+    border-bottom:1px solid #334155;
+    padding-bottom:8px;
+    margin:0 0 10px 0;
+    font-size:1rem;
+}
+
+aside button{
+    width:100%;
+    margin:8px 0;
+    padding:10px;
+    background:#334155;
+    border:none;
+    color:white;
+    border-radius:5px;
+    cursor:pointer;
+    font: inherit;
+}
+
+aside button:hover{
+    background:#475569;
+}
+
+/* Card: aspecto */
+.card{
+    background:white;
+    padding:20px;
+    border-radius:8px;
+    box-shadow:0 0 5px rgba(0,0,0,.1);
+}
+
+/* Producto: borde y botón */
+.product{
+    border:1px solid #ddd;
+    border-radius:8px;
+    padding:15px;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+}
+
+.product h3{
+    margin:0 0 8px 0;
+}
+
+.product p{
+    margin:0 0 12px 0;
+    font-weight:600;
+}
+
+/* Botón del producto */
+.product button{
+    margin-top:auto;
+    padding:8px 14px;
+    background:#2563eb;
+    color:white;
+    border:none;
+    border-radius:5px;
+    cursor:pointer;
+    font: inherit;
+}
+
+.product button:hover{
+    background:#1d4ed8;
+}
+
+/* Estados (pedidos) */
+.status{
+    padding:6px 12px;
+    border-radius:12px;
+    font-size:12px;
+    display:inline-block;
+}
+
+.pending{ background:#fde68a; }
+.delivery{ background:#bfdbfe; }
+.done{ background:#bbf7d0; }

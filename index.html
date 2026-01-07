@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GasExpress – Gas a domicilio</title>
+
+    <link rel="stylesheet" href="base.css">
+    <link rel="stylesheet" href="header.css">
+    <link rel="stylesheet" href="cuenta.css">
+    <link rel="stylesheet" href="footer.css">
+    <!-- Mantenemos index.css por si hay estilos específicos del contenido hero/features que queramos rescatar, 
+         pero idealmente deberíamos integrarlos al estilo 'card' -->
+    <style>
+        /* Estilos inline para adaptar el contenido específico de index a la estructura de cards sin crear un nuevo archivo css por ahora */
+        .hero-content {
+            text-align: center;
+            padding: 20px;
+        }
+        .hero-content h1 {
+            color: #0f172a;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        .hero-content p {
+            color: #475569;
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+        }
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .feature-item {
+            text-align: center;
+            padding: 10px;
+        }
+        .feature-item h4 {
+            color: #0f172a;
+            margin-bottom: 5px;
+        }
+        .feature-item p {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h2>🔥 GasExpress</h2>
+        <nav>
+            <button>Carrito (0)</button>
+            <button>Cerrar sesión</button>
+        </nav>
+    </header>
+
+    <div class="layout">
+
+        <aside>
+            <h3>Panel del cliente</h3>
+            <button class="active" onclick="window.location.href='index.html'">Inicio</button>
+            <button>Catálogo</button>
+            <button>Mis pedidos</button>
+            <button onclick="window.location.href='cuenta.html'">Perfil</button>
+            <button>Soporte</button>
+        </aside>
+
+        <main>
+
+            <div class="card">
+                <div class="hero-content">
+                    <h1>Gas a domicilio, rápido y seguro</h1>
+                    <p>Compra cilindros de gas y recíbelos en tu hogar en minutos.</p>
+                    <a href="cuenta.html"><button class="btn-primary">Comprar ahora</button></a>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Características</h2>
+                <div class="features-grid">
+                    <div class="feature-item">
+                        <h4>Despacho rápido</h4>
+                        <p>Entregamos gas en todo Chile.</p>
+                    </div>
+
+                    <div class="feature-item">
+                        <h4>Recambio de cilindros</h4>
+                        <p>Trae tu cilindro vacío y lo cambiamos.</p>
+                    </div>
+
+                    <div class="feature-item">
+                        <h4>Soporte 24/7</h4>
+                        <p>Atención al cliente siempre disponible.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Sobre GasExpress</h2>
+                <p style="color: #64748b;">Distribuyendo gas de forma segura y confiable en todo Chile. Comprometidos con la calidad y la rapidez en cada entrega.</p>
+            </div>
+
+        </main>
+    </div>
+
+    <footer>
+        <div class="container">
+
+            <div class="footer-section">
+                <h3>GasExpress</h3>
+                <p>Distribuyendo gas de forma segura y confiable en todo Chile.</p>
+            </div>
+
+            <div class="footer-section">
+                <h3>Servicios</h3>
+                <ul>
+                    <li>Venta de cilindros</li>
+                    <li>Recambio de gas</li>
+                    <li>Despacho a domicilio</li>
+                    <li>Soporte al cliente</li>
+                </ul>
+            </div>
+
+            <div class="footer-section">
+                <h3>Contacto</h3>
+                <p>Email: contacto@gasexpress.cl</p>
+                <p>Teléfono: +56 2 2000 1234</p>
+            </div>
+
+        </div>
+
+        <div class="copyright">
+            <p>&copy; 2026 GasExpress. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+</body>
+
+</html>
