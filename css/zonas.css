@@ -1,0 +1,45 @@
+
+.zonas-container {
+    padding: 20px;
+}
+
+.zonas-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.zona-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.zona-card h3 {
+    color: #1e293b;
+    margin-top: 0;
+    border-bottom: 2px solid var(--bs-primary);
+    padding-bottom: 10px;
+    display: inline-block;
+}
+
+.zona-info {
+    margin: 10px 0;
+    color: #475569;
+}
+
+.zona-info strong {
+    color: #0f172a;
+}
+
+.map-container {
+    width: 100%;
+    height: 400px;
+    background: #e2e8f0;
+    border-radius: 8px;
+    border: 2px solid #cbd5e1;
+    z-index: 1; /* Ensure map stays below other potential overlays */
+}

@@ -1,0 +1,92 @@
+/* css/layout.css */
+
+/* Estructura Principal */
+.layout {
+    display: flex;
+    min-height: calc(100vh - 70px); /* Ajuste aproximado para el header */
+}
+
+/* Sidebar (Panel Lateral) */
+aside {
+    width: 250px;
+    background: #1e293b;
+    color: white;
+    padding: 20px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+aside h3 {
+    border-bottom: 1px solid #334155;
+    padding-bottom: 10px;
+    margin: 0 0 15px 0;
+    font-size: 1.1rem;
+    color: #f1f5f9;
+    font-weight: 600;
+}
+
+aside button {
+    width: 100%;
+    margin: 5px 0;
+    padding: 12px 15px;
+    background: transparent;
+    border: none;
+    color: #cbd5e1;
+    border-radius: 6px;
+    cursor: pointer;
+    font: inherit;
+    text-align: left;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+}
+
+aside button:hover {
+    background: #334155;
+    color: white;
+    padding-left: 20px; /* Efecto visual de desplazamiento */
+}
+
+aside button.active {
+    background: var(--bs-primary, #2563eb);
+    color: white;
+    font-weight: 500;
+}
+
+/* Contenido Principal */
+main {
+    flex: 1;
+    padding: 30px;
+    background-color: var(--bs-body-bg, #f3f4f6);
+    overflow-x: hidden;
+}
+
+/* Responsividad */
+@media (max-width: 768px) {
+    .layout {
+        flex-direction: column;
+    }
+
+    aside {
+        width: 100%;
+        padding: 15px;
+    }
+
+    aside h3 {
+        display: none; /* Ocultar título en móvil para ahorrar espacio */
+    }
+
+    aside button {
+        display: inline-block;
+        width: auto;
+        margin: 0 5px 5px 0;
+        background: #334155;
+        padding: 8px 15px;
+        text-align: center;
+    }
+    
+    aside button:hover {
+        padding-left: 15px; /* Reset hover effect */
+    }
+}

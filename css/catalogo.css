@@ -1,0 +1,50 @@
+
+/* Estructura del catálogo */
+.products {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 15px;
+}
+
+/* Producto: borde y botón */
+.product {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    text-align: center;
+}
+
+.product-image {
+    max-width: 100%;
+    height: auto;
+    margin-bottom: 15px;
+    object-fit: contain;
+}
+
+.product h3 {
+    margin:0 0 8px 0;
+}
+
+.product p{
+    margin:0 0 12px 0;
+    font-weight:600;
+}
+
+/* Botón del producto */
+.product button{
+    margin-top:auto;
+    padding:8px 14px;
+    background:var(--bs-primary);
+    color:white;
+    border:none;
+    border-radius:5px;
+    cursor:pointer;
+    font: inherit;
+}
+
+.product button:hover{
+    background:var(--bs-primary-hover);
+}
