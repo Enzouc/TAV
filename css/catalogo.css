@@ -1,12 +1,10 @@
 
-/* Estructura del catálogo */
 .products {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 15px;
 }
 
-/* Producto: borde y botón */
 .product {
     border: 1px solid #ddd;
     border-radius: 8px;
@@ -33,7 +31,6 @@
     font-weight:600;
 }
 
-/* Botón del producto */
 .product button{
     margin-top:auto;
     padding:8px 14px;
@@ -47,4 +44,10 @@
 
 .product button:hover{
     background:var(--bs-primary-hover);
+}
+
+.banner.banner-catalogo{
+    background: linear-gradient(0deg, rgba(0,0,0,0.35), rgba(0,0,0,0.35)), url('../banner/191758257_2944123022525267_9146879438749045504_n.jpg');
+    background-size: cover;
+    background-position: center;
 }
