@@ -18,22 +18,26 @@
 
     <header>
         <h2>🔥 GasExpress</h2>
-        <nav>
-            <button onclick="window.location.href='carrito.html'">Carrito (0)</button>
-            <button onclick="window.location.href='index.html'">Cerrar sesión</button>
-        </nav>
+        
+        <div class="main-nav">
+            <a href="index.html" class="nav-link">Inicio</a>
+            <a href="catalogo.html" class="nav-link">Catálogo</a>
+            <a href="pedidos.html" class="nav-link">Mis pedidos</a>
+            <a href="ofertas.html" class="nav-link">Ofertas</a>
+            <a href="ayuda.html" class="nav-link active">Ayuda</a>
+        </div>
+
+        <div class="nav-actions">
+            <button class="btn-nav" onclick="window.location.href='carrito.html'">
+                🛒 Carrito (0)
+            </button>
+            <button class="btn-nav btn-outline" onclick="window.location.href='cuenta.html'">
+                👤 Perfil
+            </button>
+        </div>
     </header>
 
     <div class="layout">
-
-        <aside>
-            <h3>Panel del cliente</h3>
-            <button onclick="window.location.href='index.html'">Inicio</button>
-            <button onclick="window.location.href='catalogo.html'">Catálogo</button>
-            <button onclick="window.location.href='pedidos.html'">Mis pedidos</button>
-            <button onclick="window.location.href='cuenta.html'">Perfil</button>
-            <button class="active" onclick="window.location.href='ayuda.html'">Ayuda</button>
-        </aside>
 
         <main>
 
@@ -44,7 +48,7 @@
                     <textarea class="support-textarea" placeholder="Describe tu problema..."></textarea>
                 </div>
                 <div class="form-actions">
-                    <button class="btn-danger">Enviar mensaje</button>
+                    <button class="btn-danger" onclick="showContactModal()">Enviar mensaje</button>
                 </div>
             </div>
 

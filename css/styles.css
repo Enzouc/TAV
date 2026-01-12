@@ -1,25 +1,51 @@
 :root {
-    --bs-primary: #2563eb;
-    --bs-primary-hover: #1d4ed8;
+    --bs-primary: #ea580c; /* Orange-600 */
+    --bs-primary-hover: #c2410c; /* Orange-700 */
+    --bs-secondary: #0f172a; /* Slate-900 */
     --bs-danger: #dc2626;
     --bs-danger-hover: #b91c1c;
-    --bs-body-bg: #f3f4f6;
-    --bs-font-sans-serif: Arial, sans-serif;
+    --bs-body-bg: #f8fafc;
+    --bs-font-sans-serif: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 body{
     margin:0;
     font-family: var(--bs-font-sans-serif);
     background: var(--bs-body-bg);
+    color: #334155;
 }
 
 /* Global Utility Components */
 .card {
     background: white;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 0 5px rgba(0,0,0,.1);
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     margin-bottom: 20px;
+    border: 1px solid #e2e8f0;
+}
+
+.form-container {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.banner {
+    background: linear-gradient(135deg, var(--bs-primary) 0%, #facc15 100%);
+    color: white;
+    padding: 60px 20px;
+    text-align: center;
+    border-radius: 12px;
+    margin-bottom: 30px;
+    position: relative;
+    overflow: hidden;
+}
+
+.banner h1 {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin: 0;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .status {
@@ -27,6 +53,7 @@ body{
     border-radius: 12px;
     font-size: 12px;
     display: inline-block;
+    font-weight: 600;
 }
 
 .pending { background: #fde68a; }

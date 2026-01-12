@@ -17,22 +17,26 @@
 
     <header>
         <h2>🔥 GasExpress</h2>
-        <nav>
-            <button onclick="window.location.href='carrito.html'">Carrito (0)</button>
-            <button onclick="window.location.href='index.html'">Cerrar sesión</button>
-        </nav>
+        
+        <div class="main-nav">
+            <a href="index.html" class="nav-link">Inicio</a>
+            <a href="catalogo.html" class="nav-link">Catálogo</a>
+            <a href="pedidos.html" class="nav-link active">Mis pedidos</a>
+            <a href="ofertas.html" class="nav-link">Ofertas</a>
+            <a href="ayuda.html" class="nav-link">Ayuda</a>
+        </div>
+
+        <div class="nav-actions">
+            <button class="btn-nav" onclick="window.location.href='carrito.html'">
+                🛒 Carrito (0)
+            </button>
+            <button class="btn-nav btn-outline" onclick="window.location.href='cuenta.html'">
+                👤 Perfil
+            </button>
+        </div>
     </header>
 
     <div class="layout">
-
-        <aside>
-            <h3>Panel del cliente</h3>
-            <button onclick="window.location.href='index.html'">Inicio</button>
-            <button onclick="window.location.href='catalogo.html'">Catálogo</button>
-            <button class="active" onclick="window.location.href='pedidos.html'">Mis pedidos</button>
-            <button onclick="window.location.href='cuenta.html'">Perfil</button>
-            <button onclick="window.location.href='ayuda.html'">Ayuda</button>
-        </aside>
 
         <main>
 
@@ -71,7 +75,7 @@
 
             <div class="footer-section">
                 <h3>GasExpress</h3>
-                <p>Distribuyendo gas de forma segura y confiable en todo Chile.</p>
+                <p>Distribuyendo gas de forma segura y confiable en Concepción.</p>
             </div>
 
             <div class="footer-section">
@@ -87,7 +91,7 @@
             <div class="footer-section">
                 <h3>Contacto</h3>
                 <p>Email: contacto@gasexpress.cl</p>
-                <p>Teléfono: +56 2 2000 1234</p>
+                <p>Teléfono: +56 41 2000 1234</p>
             </div>
 
         </div>

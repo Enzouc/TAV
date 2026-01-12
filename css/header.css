@@ -1,32 +1,94 @@
-header{
-    background:#0f172a;
-    color:white;
-    padding:15px;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
+header {
+    background: var(--bs-secondary);
+    color: white;
+    padding: 0 20px;
+    height: 70px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
-header h2{
-    margin:0;
-    font-size:1.25rem;
+header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
-nav{
-    display:flex;
-    gap:8px;
+.main-nav {
+    display: flex;
+    gap: 20px;
+    align-items: center;
 }
 
-nav button{
-    background:var(--bs-primary);
-    border:none;
-    padding:10px 14px;
-    color:white;
-    border-radius:5px;
-    cursor:pointer;
-    font: inherit;
+.nav-link {
+    color: #cbd5e1;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 8px 12px;
+    border-radius: 6px;
+    transition: all 0.2s;
 }
 
-nav button:hover{
-    background:var(--bs-primary-hover);
+.nav-link:hover, .nav-link.active {
+    color: white;
+    background: rgba(255,255,255,0.1);
+}
+
+.nav-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-nav {
+    background: var(--bs-primary);
+    border: none;
+    padding: 8px 16px;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+
+.btn-nav:hover {
+    background: var(--bs-primary-hover);
+}
+
+.btn-outline {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.3);
+}
+
+.btn-outline:hover {
+    border-color: white;
+    background: rgba(255,255,255,0.1);
+}
+
+@media (max-width: 768px) {
+    header {
+        padding: 0 15px;
+    }
+
+    .main-nav {
+        display: none; /* Hide for now, or implement hamburger */
+        position: absolute;
+        top: 70px;
+        left: 0;
+        right: 0;
+        background: var(--bs-secondary);
+        flex-direction: column;
+        padding: 20px;
+        border-top: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .main-nav.show {
+        display: flex;
+    }
 }
