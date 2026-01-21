@@ -1,0 +1,55 @@
+{
+  "version": "v1",
+  "productos": [
+    {
+      "id": "#P001",
+      "nombre": "Gas 11 Kg",
+      "descripcion": "Cilindro de gas licuado de 11kg, ideal para estufas y cocinas domésticas.",
+      "precio": 14500,
+      "stock": 50,
+      "categoria": "Normal",
+      "imagen": "productos_gas/producto-gas-11-kg.png",
+      "rating": 4.6
+    },
+    {
+      "id": "#P002",
+      "nombre": "Gas 15 Kg",
+      "descripcion": "Cilindro de 15kg con mayor autonomía, perfecto para familias medianas.",
+      "precio": 19000,
+      "stock": 30,
+      "categoria": "Normal",
+      "imagen": "productos_gas/producto-gas-15-kg.png",
+      "rating": 4.7
+    },
+    {
+      "id": "#P003",
+      "nombre": "Gas 45 Kg",
+      "descripcion": "Gran capacidad de 45kg para alto consumo en comercios y restaurantes.",
+      "precio": 58000,
+      "stock": 5,
+      "categoria": "Industrial",
+      "imagen": "productos_gas/producto-gas-45-kg.png",
+      "rating": 4.8
+    },
+    {
+      "id": "#P004",
+      "nombre": "Gas 5 Kg",
+      "descripcion": "Formato portátil de 5kg, ligero y esencial para camping.",
+      "precio": 8000,
+      "stock": 100,
+      "categoria": "Camping",
+      "imagen": "productos_gas/producto-gas-5-kg.png",
+      "rating": 4.5
+    },
+    {
+      "id": "#P005",
+      "nombre": "Catalítico 11 Kg",
+      "descripcion": "Cilindro especial para estufas catalíticas con conexión rápida.",
+      "precio": 15500,
+      "stock": 20,
+      "categoria": "Catalítico",
+      "imagen": "productos_gas/producto-gas-catalitico-11-kg.jpg",
+      "rating": 4.4
+    }
+  ]
+}

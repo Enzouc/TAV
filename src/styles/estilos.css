@@ -1,0 +1,190 @@
+:root {
+    --bs-primary: #ea580c; /* Orange-600 */
+    --bs-primary-hover: #c2410c; /* Orange-700 */
+    --bs-secondary: #0f172a; /* Slate-900 */
+    --bs-danger: #dc2626;
+    --bs-danger-hover: #b91c1c;
+    --bs-body-bg: #f8fafc;
+    --bs-font-sans-serif: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body{
+    margin:0;
+    font-family: var(--bs-font-sans-serif);
+    background: var(--bs-body-bg);
+    color: #334155;
+}
+
+/* Global Utility Components */
+.card {
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    margin-bottom: 20px;
+    border: 1px solid #e2e8f0;
+}
+
+.form-container {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.banner {
+    background: linear-gradient(135deg, var(--bs-primary) 0%, #facc15 100%);
+    color: white;
+    padding: 60px 20px;
+    text-align: center;
+    border-radius: 12px;
+    margin-bottom: 30px;
+    position: relative;
+    overflow: hidden;
+}
+
+.banner h1 {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin: 0;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.status {
+    padding: 6px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    display: inline-block;
+    font-weight: 600;
+}
+
+.pending { background: #fde68a; }
+.delivery { background: #bfdbfe; }
+.done { background: #bbf7d0; }
+
+table {
+    width:100%;
+    border-collapse:collapse;
+}
+
+th, td {
+    padding:8px;
+    text-align:left;
+}
+
+input, textarea{
+    width:100%;
+    padding:10px;
+    margin:8px 0;
+    border-radius:5px;
+    border:1px solid #ccc;
+    box-sizing: border-box;
+}
+
+.btn-primary {
+    background: var(--bs-primary);
+    color: #ffffff;
+    padding: 10px 14px;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    font: inherit;
+}
+
+.btn-primary:hover { background: var(--bs-primary-hover); }
+
+.btn-danger {
+    background: var(--bs-danger);
+    color: #ffffff;
+    padding: 10px 14px;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    font: inherit;
+}
+
+.btn-danger:hover { background: var(--bs-danger-hover); }
+
+/* Modal & Notificacion Estilos Unificados */
+.mc-modal-superposicion {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+}
+.mc-modal-dialogo {
+  width: 100%;
+  max-width: 520px;
+  background: #fff;
+  border-radius: .5rem;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  overflow: hidden;
+}
+.mc-modal-encabezado {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #eee;
+}
+.mc-modal-titulo {
+  margin: 0;
+}
+.mc-modal-cuerpo {
+  padding: 1rem 1.25rem;
+}
+.mc-modal-mensaje {
+  margin: 0;
+}
+.mc-modal-pie {
+  display: flex;
+  gap: .5rem;
+  justify-content: flex-end;
+  padding: .75rem 1.25rem;
+  border-top: 1px solid #eee;
+}
+.mc-modal-info .mc-modal-encabezado { background: #e7f1ff; }
+.mc-modal-warning .mc-modal-encabezado { background: #fff3cd; }
+.mc-modal-error .mc-modal-encabezado { background: #fde2e2; }
+
+.mc-aparicion { animation: mcAparicion .18s ease-out; }
+.mc-deslizar-arriba { animation: mcDeslizarArriba .2s ease-out; }
+@keyframes mcAparicion {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes mcDeslizarArriba {
+  from { transform: translateY(8px); }
+  to { transform: translateY(0); }
+}
+
+.mc-aviso-contenedor {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1060;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+.mc-aviso {
+  width: 300px;
+  border-radius: .5rem;
+  box-shadow: 0 6px 22px rgba(0,0,0,0.15);
+  overflow: hidden;
+  animation: mcDeslizarArriba .2s ease-out;
+}
+.mc-aviso-encabezado {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .5rem .75rem;
+  font-weight: 600;
+}
+.mc-aviso-cuerpo {
+  padding: .5rem .75rem .75rem;
+}
+.mc-aviso-info { background: #e7f1ff; }
+.mc-aviso-warning { background: #fff3cd; }
+.mc-aviso-error { background: #fde2e2; }

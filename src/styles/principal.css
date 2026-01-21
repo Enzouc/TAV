@@ -1,0 +1,58 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+
+/* Import migrated styles */
+@import './estilos.css';
+@import './header.css';
+@import './footer.css';
+@import './estructura.css';
+@import './inicio.css';
+@import './catalogo.css';
+@import './carrito.css';
+@import './pedidos.css';
+@import './ofertas.css';
+@import './cuenta.css';
+@import './ayuda.css';
+@import './soporte.css';
+@import './repartidor.css';
+@import './admin.css';
+@import './zonas.css';
+
+:root {
+    --bs-primary: #f97316; /* Orange-500 */
+    --bs-primary-rgb: 249, 115, 22;
+    --bs-secondary: #64748b;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: #f8f9fa;
+}
+
+.btn-primary {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+}
+
+.btn-primary:hover {
+    background-color: #ea580c; /* Orange-600 */
+    border-color: #ea580c;
+}
+
+.text-primary {
+    color: var(--bs-primary) !important;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #bbb;
+}
