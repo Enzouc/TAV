@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { obtenerCarrito, guardarCarrito } from '../utils/almacenamiento';
-import { obtenerTodosLosProductos, obtenerImagenProducto } from '../utils/producto';
+import { obtenerTodosLosProductos } from '../utils/producto';
 import { aplicarFormatoMoneda } from '../utils/datos';
 import ProductCard from '../components/ProductCard';
 import FiltrosCatalogo from '../components/FiltrosCatalogo';
 import ControlesPaginacion from '../components/ControlesPaginacion';
-import ProductModal from '../components/ProductModal';
-import { getProducts } from '../services/productsService';
+import { fetchProducts } from '../services/productService';
 
 const VistaCatalogo = ({ data, apiUrl = null, initialView = 'grid', cardClassName = '', cardStyle = {} }) => {
     const [productos, setProductos] = useState([]);
     const [carrito, setCarrito] = useState([]);
     const [productoModal, setProductoModal] = useState(null);
+    const [cantidad, setCantidad] = useState(1);
     const [vista, setVista] = useState(initialView === 'list' ? 'list' : 'grid');
     const [filtroTexto, setFiltroTexto] = useState('');
     const [filtroCategoria, setFiltroCategoria] = useState('todas');
@@ -22,7 +22,6 @@ const VistaCatalogo = ({ data, apiUrl = null, initialView = 'grid', cardClassNam
     const [error, setError] = useState('');
 
     useEffect(() => {
-        const controller = new AbortController();
         const cargar = async () => {
             try {
                 setCargando(true);
@@ -30,47 +29,29 @@ const VistaCatalogo = ({ data, apiUrl = null, initialView = 'grid', cardClassNam
                 let fuente = null;
                 if (Array.isArray(data?.productos)) {
                     fuente = data.productos;
-                } else {
-                    // Intento de carga desde API con fallback a local
-                    try {
-                        const res = await getProducts({}, controller.signal);
-                        // Validar si es una respuesta válida (API real) o HTML/Error
-                        if (typeof res === 'string' && res.trim().startsWith('<')) {
-                             throw new Error('Respuesta API inválida (HTML)');
-                        }
-                        
-                        const items = Array.isArray(res) ? res : (res.data || []);
-                        if (!Array.isArray(items)) throw new Error('Formato de datos inválido');
-                        
-                        fuente = items;
-                    } catch (apiErr) {
-                        if (apiErr.name !== 'CanceledError' && apiErr.code !== 'ERR_CANCELED') {
-                            console.warn('Fallo API o datos inválidos, usando datos locales:', apiErr);
-                            // Fallback a datos locales
-                            fuente = obtenerTodosLosProductos();
-                        } else {
-                            // Si es cancelación, relanzamos para que lo maneje el catch externo o simplemente retornamos
-                            throw apiErr;
-                        }
+                } else if (apiUrl) {
+                    const r = await fetchProducts(apiUrl);
+                    if (r.status === 'success') {
+                        fuente = r.data;
+                    } else {
+                        setError('Error al obtener productos: ' + (r.error?.message || 'desconocido'));
+                        fuente = obtenerTodosLosProductos();
                     }
+                } else {
+                    fuente = obtenerTodosLosProductos();
                 }
-                if (fuente) setProductos(fuente);
+                setProductos(fuente);
                 setCarrito(obtenerCarrito());
             } catch (e) {
-                if (e.name !== 'CanceledError' && e.code !== 'ERR_CANCELED') {
-                    setError('Error al cargar catálogo: ' + e.message);
-                }
+                setError('Error al cargar catálogo: ' + e.message);
             } finally {
-                if (!controller.signal.aborted) setCargando(false);
+                setCargando(false);
             }
         };
         cargar();
         const manejarActualizacionCarrito = () => setCarrito(obtenerCarrito());
         window.addEventListener('carrito-actualizado', manejarActualizacionCarrito);
-        return () => {
-            window.removeEventListener('carrito-actualizado', manejarActualizacionCarrito);
-            controller.abort();
-        };
+        return () => window.removeEventListener('carrito-actualizado', manejarActualizacionCarrito);
     }, []);
 
     const obtenerImagen = (nombre) => {
@@ -95,25 +76,28 @@ const VistaCatalogo = ({ data, apiUrl = null, initialView = 'grid', cardClassNam
     const abrirModal = (producto) => {
         if (producto.stock <= 0) return;
         setProductoModal(producto);
+        setCantidad(1);
     };
 
     const cerrarModal = () => {
         setProductoModal(null);
     };
 
-    const handleAddToCart = (producto, qty) => {
+    const agregarAlCarrito = () => {
+        if (!productoModal) return;
+
         const nuevoCarrito = [...carrito];
-        const indiceItemExistente = nuevoCarrito.findIndex(item => item.id === producto.id);
+        const indiceItemExistente = nuevoCarrito.findIndex(item => item.id === productoModal.id);
 
         if (indiceItemExistente > -1) {
-            nuevoCarrito[indiceItemExistente].cantidad += qty;
+            nuevoCarrito[indiceItemExistente].cantidad += cantidad;
         } else {
             nuevoCarrito.push({
-                id: producto.id,
-                nombre: producto.nombre,
-                precio: producto.precio,
-                img: obtenerImagenProducto(producto.nombre),
-                cantidad: qty
+                id: productoModal.id,
+                nombre: productoModal.nombre,
+                precio: productoModal.precio,
+                img: obtenerImagen(productoModal.nombre),
+                cantidad: cantidad
             });
         }
 
@@ -224,12 +208,68 @@ const VistaCatalogo = ({ data, apiUrl = null, initialView = 'grid', cardClassNam
             </main>
 
             {/* Modal de Detalle */}
-            <ProductModal 
-                show={!!productoModal}
-                onClose={cerrarModal}
-                product={productoModal ? { ...productoModal, imagen: obtenerImagen(productoModal.nombre) } : null}
-                onAddToCart={handleAddToCart}
-            />
+            {productoModal && (
+                <div className="modal show d-block fade-in" style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(2px)' }} tabIndex="-1">
+                    <div className="modal-dialog modal-dialog-centered">
+                        <div className="modal-content border-0 shadow-lg">
+                            <div className="modal-header border-0 pb-0">
+                                <h5 className="modal-title fw-bold text-primary">{productoModal.nombre}</h5>
+                                <button type="button" className="btn-close" onClick={cerrarModal} aria-label="Close"></button>
+                            </div>
+                            <div className="modal-body text-center px-4 py-2">
+                                <div className="bg-light rounded-3 p-3 mb-3">
+                                    <img 
+                                        src={obtenerImagen(productoModal.nombre)} 
+                                        alt={productoModal.nombre} 
+                                        className="img-fluid" 
+                                        style={{ maxHeight: '250px', mixBlendMode: 'multiply' }} 
+                                        loading="lazy"
+                                    />
+                                </div>
+                                <p className="text-muted">{productoModal.descripcion}</p>
+                                
+                                <div className="d-flex justify-content-center align-items-center mb-3">
+                                    <span className="badge bg-secondary me-2">{productoModal.categoria}</span>
+                                    <span className={`badge ${productoModal.stock > 10 ? 'bg-success' : 'bg-warning text-dark'}`}>
+                                        Stock: {productoModal.stock} un.
+                                    </span>
+                                </div>
+
+                                <h3 className="text-primary fw-bold my-3">{aplicarFormatoMoneda(productoModal.precio)}</h3>
+                                
+                                <div className="d-flex justify-content-center align-items-center gap-3 p-2 border rounded bg-light d-inline-flex">
+                                    <button 
+                                        className="btn btn-sm btn-outline-secondary rounded-circle" 
+                                        onClick={() => setCantidad(Math.max(1, cantidad - 1))}
+                                        disabled={cantidad <= 1}
+                                        style={{ width: '32px', height: '32px' }}
+                                    >
+                                        -
+                                    </button>
+                                    <span className="fw-bold fs-5" style={{ minWidth: '30px' }}>{cantidad}</span>
+                                    <button 
+                                        className="btn btn-sm btn-outline-secondary rounded-circle" 
+                                        onClick={() => setCantidad(cantidad + 1)}
+                                        disabled={cantidad >= productoModal.stock}
+                                        style={{ width: '32px', height: '32px' }}
+                                    >
+                                        +
+                                    </button>
+                                </div>
+                                <div className="mt-2 text-muted small">
+                                    Total a pagar: <strong>{aplicarFormatoMoneda(productoModal.precio * cantidad)}</strong>
+                                </div>
+                            </div>
+                            <div className="modal-footer border-0 pt-0 justify-content-center pb-4">
+                                <button type="button" className="btn btn-outline-secondary px-4" onClick={cerrarModal}>Seguir mirando</button>
+                                <button type="button" className="btn btn-primary px-5 fw-bold" onClick={agregarAlCarrito}>
+                                    Agregar al Carrito
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

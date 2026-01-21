@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { iniciarSesion } from '../utils/autenticacion';
-import { login } from '../services/usersService';
-import { guardarUsuarioActual } from '../utils/almacenamiento';
 
 const VistaInicioSesion = () => {
     const navegar = useNavigate();
@@ -11,54 +9,24 @@ const VistaInicioSesion = () => {
     const [error, setError] = useState('');
     const [cargando, setCargando] = useState(false);
 
-    const manejarEnvio = async (e) => {
+    const manejarEnvio = (e) => {
         e.preventDefault();
         setError('');
         setCargando(true);
-
-        const controller = new AbortController();
-        
-        try {
-            // Intento con servicio API
-            const respuesta = await login({ email, contrasena }, controller.signal);
-            // La respuesta del backend ya contiene los datos del usuario en la raíz
-            const usuario = respuesta;
-            
-            if (usuario && usuario.token) {
-                // Aseguramos que el usuario se guarde correctamente
-                guardarUsuarioActual(usuario);
-                
-                // Pequeño delay para asegurar que el almacenamiento se complete
-                setTimeout(() => {
-                    if (usuario.rol === 'repartidor') navegar('/delivery/dashboard');
-                    else if (usuario.rol === 'admin') navegar('/admin/dashboard');
-                    else navegar('/client/dashboard');
-                }, 100);
-            } else {
-                // Si no hay usuario/token en respuesta, algo raro pasó
-                setError('Error al recibir datos de sesión');
-            }
-        } catch (err) {
-            // Si es error de red o 404 (API no existe), usamos fallback local
-            // Si es 401 (Credenciales), mostramos error
-            if (!err.status || err.status === 404 || err.status >= 500) {
-                console.warn('API login falló o no disponible, usando local:', err);
-                const resultado = iniciarSesion(email, contrasena);
-                if (resultado.exito) {
-                    setTimeout(() => {
-                        if (resultado.usuario.rol === 'repartidor') navegar('/delivery/dashboard');
-                        else if (resultado.usuario.rol === 'admin') navegar('/admin/dashboard');
-                        else navegar('/client/dashboard');
-                    }, 300);
+        const resultado = iniciarSesion(email, contrasena);
+        if (resultado.exito) {
+            setTimeout(() => {
+                if (resultado.usuario.rol === 'repartidor') {
+                    navegar('/repartidor');
+                } else if (resultado.usuario.rol === 'admin') {
+                    navegar('/admin');
                 } else {
-                    setError(resultado.mensaje);
+                    navegar('/');
                 }
-            } else {
-                // Error de validación o credenciales desde API
-                setError(err.message || 'Error al iniciar sesión');
-            }
-        } finally {
-            if (!controller.signal.aborted) setCargando(false);
+            }, 300);
+        } else {
+            setError(resultado.mensaje);
+            setCargando(false);
         }
     };
 

@@ -1,146 +1,30 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { guardarUsuarioActual, obtenerCarrito, guardarCarrito } from '../utils/almacenamiento';
-import { usarUI } from '../components/ContextoUI';
+import { guardarUsuarioActual } from '../utils/almacenamiento';
 import { Carousel } from 'bootstrap';
-import ProductModal from '../components/ProductModal';
-import { login } from '../services/usersService';
 
 const VistaInicio = () => {
     const navegar = useNavigate();
-    const { mostrarNotificacion } = usarUI();
-    const [productoModal, setProductoModal] = useState(null);
-    const [cargandoLogin, setCargandoLogin] = useState(false);
 
-    // Datos de productos en oferta para renderizado dinámico y consistente
-    const PRODUCTOS_OFERTA = [
-        {
-            id: '#P002',
-            nombre: 'Pack Familiar 15Kg',
-            precio: 19125,
-            precioOriginal: 22500,
-            imagen: 'productos_gas/producto-gas-15-kg.png',
-            descripcion: 'Ideal para el hogar. Incluye revisión de seguridad gratuita.',
-            categoria: 'Normal',
-            badge: { text: '-15% OFF', color: 'bg-danger' },
-            badgeTextClass: 'text-white'
-        },
-        {
-            id: '#P004',
-            nombre: 'Camping Pack 5Kg',
-            precio: 7500,
-            precioOriginal: 15000,
-            imagen: 'productos_gas/producto-gas-5-kg.png',
-            descripcion: 'Lleva 2 cilindros pequeños perfectos para tus salidas.',
-            categoria: 'Camping',
-            badge: { text: '2x1', color: 'bg-warning text-dark' },
-            badgeTextClass: 'text-dark'
-        },
-        {
-            id: '#P003',
-            nombre: 'Cilindro Industrial 45Kg',
-            precio: 58000,
-            precioOriginal: 65000,
-            imagen: 'productos_gas/producto-gas-45-kg.png',
-            descripcion: 'Máxima duración para tu negocio o calefacción central.',
-            categoria: 'Industrial',
-            badge: { text: 'Envío Gratis', color: 'bg-success' },
-            badgeTextClass: 'text-white'
-        }
-    ];
-
-    const handleAddToCart = (producto, cantidad = 1) => {
-        const carrito = obtenerCarrito();
-        const itemIndex = carrito.findIndex((item) => item.id === producto.id);
-
-        if (itemIndex > -1) {
-            carrito[itemIndex].cantidad += cantidad;
-            // Actualizar precio al de la oferta si ya existe
-            carrito[itemIndex].precio = producto.precio;
-        } else {
-            carrito.push({
-                id: producto.id,
-                nombre: producto.nombre,
-                precio: producto.precio,
-                cantidad: cantidad,
-                imagen: producto.imagen
-            });
-        }
-        guardarCarrito(carrito);
-        mostrarNotificacion({
-            tipo: 'success',
-            titulo: 'Agregado al carrito',
-            mensaje: `${producto.nombre} agregado correctamente.`,
-        });
-        setProductoModal(null);
-    };
-
-    const abrirModalDesdeBoton = (e, producto) => {
-        e.stopPropagation();
-        e.preventDefault();
-        abrirModal(producto);
-    };
-
-    const abrirModal = (producto) => {
-        setProductoModal({ ...producto, stock: 50 }); // Stock simulado para ofertas
-    };
-
-    const loginTemporal = async (rol) => {
-        if (cargandoLogin) return;
-        setCargandoLogin(true);
-        
-        let credenciales;
+    const loginTemporal = (rol) => {
+        let usuario;
         if (rol === 'admin') {
-            credenciales = { email: 'admin@tav.cl', contrasena: 'admin123' };
+            usuario = { id: '#ADMIN', nombre: 'Administrador', email: 'admin@gasexpress.cl', rol: 'admin' };
         } else if (rol === 'repartidor') {
-            credenciales = { email: 'repartidor@tav.cl', contrasena: 'repartidor123' };
-        } else {
-            setCargandoLogin(false);
-            return;
+            usuario = { id: '#R050', nombre: 'Pedro El Rayo', email: 'pedro@gasexpress.cl', rol: 'repartidor' };
         }
         
-        try {
-            const data = await login(credenciales);
-            // El servicio login ya guarda el token en localStorage
-            
-            // Guardamos la información del usuario
-            guardarUsuarioActual({
-                id: data.id,
-                nombre: data.nombre,
-                email: data.email,
-                rol: data.rol
-            });
-
-            mostrarNotificacion({
-                tipo: 'success',
-                titulo: 'Inicio de Sesión Exitoso',
-                mensaje: `Bienvenido ${data.nombre}`
-            });
-
-            if (data.rol === 'admin') navegar('/admin');
-            else if (data.rol === 'repartidor') navegar('/repartidor');
-            else navegar('/'); // Fallback
-            
-        } catch (error) {
-            console.error('Error en login temporal:', error);
-            mostrarNotificacion({
-                tipo: 'error',
-                titulo: 'Error de Acceso',
-                mensaje: error.response?.data?.message || error.message || 'No se pudo iniciar sesión. Verifique conexión.'
-            });
-        } finally {
-            setCargandoLogin(false);
+        if (usuario) {
+            guardarUsuarioActual(usuario);
+            if (rol === 'admin') navegar('/admin');
+            if (rol === 'repartidor') navegar('/repartidor');
         }
     };
 
     useEffect(() => {
         const el = document.getElementById('carruselHero');
         if (!el) return;
-        try {
-            new Carousel(el, { interval: 5000, pause: 'hover', ride: 'carousel', touch: true, wrap: true });
-        } catch (e) {
-            console.error('Error inicializando carrusel', e);
-        }
+        new Carousel(el, { interval: 5000, pause: 'hover', ride: 'carousel', touch: true, wrap: true });
     }, []);
 
     return (
@@ -149,20 +33,8 @@ const VistaInicio = () => {
             <div className="container mt-3 text-end">
                 <span className="me-2 badge bg-warning text-dark">Acceso Temporal (Debug)</span>
                 <div className="btn-group">
-                    <button 
-                        className="btn btn-sm btn-outline-dark" 
-                        onClick={() => loginTemporal('admin')}
-                        disabled={cargandoLogin}
-                    >
-                        {cargandoLogin ? '...' : 'Acceso Admin'}
-                    </button>
-                    <button 
-                        className="btn btn-sm btn-outline-dark" 
-                        onClick={() => loginTemporal('repartidor')}
-                        disabled={cargandoLogin}
-                    >
-                        {cargandoLogin ? '...' : 'Acceso Repartidor'}
-                    </button>
+                    <button className="btn btn-sm btn-outline-dark" onClick={() => loginTemporal('admin')}>Acceso Admin</button>
+                    <button className="btn btn-sm btn-outline-dark" onClick={() => loginTemporal('repartidor')}>Acceso Repartidor</button>
                 </div>
             </div>
 
@@ -238,52 +110,78 @@ const VistaInicio = () => {
                     </Link>
                 </div>
                 <div className="row row-cols-1 row-cols-md-3 g-4">
-                    {PRODUCTOS_OFERTA.map((producto) => (
-                        <div className="col" key={producto.id}>
-                            <div
-                                className="card h-100 border-0 shadow-sm"
-                                role="link"
-                                tabIndex={0}
-                                onClick={() => abrirModal(producto)}
-                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') abrirModal(producto); }}
-                                style={{ cursor: 'pointer' }}
-                                aria-label={`Ver detalle de ${producto.nombre}`}
-                            >
-                                <img
-                                    src={producto.imagen}
-                                    className="card-img-top p-3"
-                                    alt={producto.nombre}
-                                    style={{ height: '200px', objectFit: 'contain' }}
-                                    loading="lazy"
-                                />
-                                <div className="card-body text-center">
-                                    <span className={`badge ${producto.badge.color} mb-2`}>{producto.badge.text}</span>
-                                    <h5 className="card-title">{producto.nombre}</h5>
-                                    <p className="card-text text-muted">{producto.descripcion}</p>
-                                    <div className="mb-3">
-                                        <span className="text-decoration-line-through text-muted">${producto.precioOriginal.toLocaleString('es-CL')}</span>
-                                        <span className="fs-4 fw-bold text-primary ms-2">${producto.precio.toLocaleString('es-CL')}</span>
-                                    </div>
-                                    <button 
-                                        className="btn btn-primary w-100"
-                                        onClick={(e) => abrirModalDesdeBoton(e, producto)}
-                                        type="button"
-                                    >
-                                        Agregar al carrito
-                                    </button>
+                    {/* Productos destacados harcoded para Inicio, o obtener de BD */}
+                    <div className="col">
+                        <div className="card h-100 border-0 shadow-sm">
+                            <img
+                                src="productos_gas/producto-gas-15-kg.png"
+                                className="card-img-top p-3"
+                                alt="Pack Familiar"
+                                style={{ height: '200px', objectFit: 'contain' }}
+                                loading="lazy"
+                            />
+                            <div className="card-body text-center">
+                                <span className="badge bg-danger mb-2">-15% OFF</span>
+                                <h5 className="card-title">Pack Familiar 15Kg</h5>
+                                <p className="card-text text-muted">Ideal para el hogar. Incluye revisión de seguridad gratuita.</p>
+                                <div className="mb-3">
+                                    <span className="text-decoration-line-through text-muted">$22.500</span>
+                                    <span className="fs-4 fw-bold text-primary ms-2">$19.125</span>
                                 </div>
+                                <Link to="/ofertas" className="btn btn-primary w-100">
+                                    Ver en ofertas
+                                </Link>
                             </div>
                         </div>
-                    ))}
+                    </div>
+                    <div className="col">
+                        <div className="card h-100 border-0 shadow-sm">
+                            <img
+                                src="productos_gas/producto-gas-5-kg.png"
+                                className="card-img-top p-3"
+                                alt="Pack Camping"
+                                style={{ height: '200px', objectFit: 'contain' }}
+                                loading="lazy"
+                            />
+                            <div className="card-body text-center">
+                                <span className="badge bg-warning text-dark mb-2">2x1</span>
+                                <h5 className="card-title">Camping Pack 5Kg</h5>
+                                <p className="card-text text-muted">Lleva 2 cilindros pequeños perfectos para tus salidas.</p>
+                                <div className="mb-3">
+                                    <span className="text-decoration-line-through text-muted">$15.000</span>
+                                    <span className="fs-4 fw-bold text-primary ms-2">$7.500</span>
+                                </div>
+                                <Link to="/ofertas" className="btn btn-primary w-100">
+                                    Ver en ofertas
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="col">
+                        <div className="card h-100 border-0 shadow-sm">
+                            <img
+                                src="productos_gas/producto-gas-45-kg.png"
+                                className="card-img-top p-3"
+                                alt="Pack Industrial"
+                                style={{ height: '200px', objectFit: 'contain' }}
+                                loading="lazy"
+                            />
+                            <div className="card-body text-center">
+                                <span className="badge bg-success mb-2">Envío Gratis</span>
+                                <h5 className="card-title">Cilindro Industrial 45Kg</h5>
+                                <p className="card-text text-muted">Máxima duración para tu negocio o calefacción central.</p>
+                                <div className="mb-3">
+                                    <span className="text-decoration-line-through text-muted">$65.000</span>
+                                    <span className="fs-4 fw-bold text-primary ms-2">$58.000</span>
+                                </div>
+                                <Link to="/ofertas" className="btn btn-primary w-100">
+                                    Ver en ofertas
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-
-            <ProductModal  
-                show={!!productoModal}
-                onClose={() => setProductoModal(null)}
-                product={productoModal}
-                onAddToCart={handleAddToCart}
-            />
         </main>
     );
 };

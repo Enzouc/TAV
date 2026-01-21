@@ -49,7 +49,7 @@ describe('RutaProtegida', () => {
         render(
             <MemoryRouter initialEntries={['/solo-admin']}>
                 <Routes>
-                    <Route path="/client/dashboard" element={<div>Panel Cliente</div>} />
+                    <Route path="/" element={<div>Pagina Inicio</div>} />
                     <Route element={<RutaProtegida rolesPermitidos={['admin']} />}>
                         <Route path="/solo-admin" element={<div>Contenido Admin</div>} />
                     </Route>
@@ -57,7 +57,7 @@ describe('RutaProtegida', () => {
             </MemoryRouter>
         );
 
-        expect(screen.getByText('Panel Cliente')).toBeTruthy();
+        expect(screen.getByText('Pagina Inicio')).toBeTruthy();
         expect(screen.queryByText('Contenido Admin')).toBeNull();
     });
 
@@ -67,7 +67,7 @@ describe('RutaProtegida', () => {
         render(
             <MemoryRouter initialEntries={['/solo-admin']}>
                 <Routes>
-                    <Route path="/delivery/dashboard" element={<div>Panel Repartidor</div>} />
+                    <Route path="/repartidor" element={<div>Panel Repartidor</div>} />
                     <Route element={<RutaProtegida rolesPermitidos={['admin']} />}>
                         <Route path="/solo-admin" element={<div>Contenido Admin</div>} />
                     </Route>

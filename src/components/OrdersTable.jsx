@@ -19,13 +19,12 @@ import { aplicarFormatoMoneda } from '../utils/datos';
  * @property {Pedido[]} [data]
  * @property {string} [apiUrl]
  * @property {(p:Pedido)=>void} [onAsignar]
- * @property {(p:Pedido)=>void} [onCancelar]
  * @property {number} [pageSize]
  */
 /**
  * @param {OrdersTableProps} props
  */
-const OrdersTable = ({ data, apiUrl, onAsignar, onCancelar, pageSize = 10 }) => {
+const OrdersTable = ({ data, apiUrl, onAsignar, pageSize = 10 }) => {
   const [pedidos, setPedidos] = useState([]);
   const [repartidores, setRepartidores] = useState([]);
   const [cargando, setCargando] = useState(false);
@@ -67,7 +66,7 @@ const OrdersTable = ({ data, apiUrl, onAsignar, onCancelar, pageSize = 10 }) => 
     cargar();
   }, [data, apiUrl]);
 
-  const estados = ['todos', 'Pendiente', 'En Camino', 'Entregado', 'Cancelado'];
+  const estados = ['todos', 'Pendiente', 'En Camino', 'Entregado'];
   const repartidorOptions = useMemo(() => {
     const base = repartidores.map(d => ({ id: d.id, nombre: d.nombre }));
     return [{ id: 'todos', nombre: 'todos' }, ...base];
@@ -177,14 +176,9 @@ const OrdersTable = ({ data, apiUrl, onAsignar, onCancelar, pageSize = 10 }) => 
                     : <span className="badge bg-secondary">Sin asignar</span>}
                 </td>
                 <td>
-                  <div className="d-flex gap-2">
-                    {!p.idRepartidor && p.estado !== 'Cancelado' && p.estado !== 'Entregado' && (
-                      <button className="btn btn-sm btn-outline-primary" onClick={() => onAsignar && onAsignar(p)}>Asignar</button>
-                    )}
-                    {p.estado !== 'Cancelado' && p.estado !== 'Entregado' && (
-                      <button className="btn btn-sm btn-outline-danger" onClick={() => onCancelar && onCancelar(p)}>Cancelar</button>
-                    )}
-                  </div>
+                  {!p.idRepartidor && (
+                    <button className="btn btn-sm btn-outline-primary" onClick={() => onAsignar && onAsignar(p)}>Asignar</button>
+                  )}
                 </td>
               </tr>
             ))}

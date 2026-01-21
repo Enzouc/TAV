@@ -6,9 +6,6 @@ import { obtenerTodosLosProductos, agregarProducto, eliminarProducto, actualizar
 import { obtenerTodosLosPedidos, asignarRepartidor } from '../utils/pedido';
 import { usarUI } from '../components/ContextoUI';
 import { obtenerUsuarioActual } from '../utils/almacenamiento';
-import { getProducts, createProduct as apiCreateProduct, updateProduct as apiUpdateProduct, deleteProduct as apiDeleteProduct } from '../services/productsService';
-import { getUsers, createUser as apiCreateUser, updateUser as apiUpdateUser, deleteUser as apiDeleteUser } from '../services/usersService';
-import { getOrders, assignOrder as apiAssignOrder, cancelOrder as apiCancelOrder } from '../services/ordersService';
 
 const VistaAdmin = () => {
     const [seccionActiva, setSeccionActiva] = useState('dashboard');
@@ -16,7 +13,6 @@ const VistaAdmin = () => {
     const [estadisticas, setEstadisticas] = useState({ ventas: 0, pedidosActivos: 0, repartidores: 0, bajoStock: 0 });
     const [productos, setProductos] = useState([]);
     const [usuarios, setUsuarios] = useState([]);
-    const [pedidos, setPedidos] = useState([]); // Nuevo estado para pedidos
     
     const [mostrarModalProducto, setMostrarModalProducto] = useState(false);
     const [mostrarModalUsuario, setMostrarModalUsuario] = useState(false);
@@ -31,11 +27,6 @@ const VistaAdmin = () => {
     const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null);
     const [idRepartidorSeleccionado, setIdRepartidorSeleccionado] = useState('');
     const [errorAsignacion, setErrorAsignacion] = useState('');
-    
-    // Estados para Cancelación
-    const [mostrarModalCancelacion, setMostrarModalCancelacion] = useState(false);
-    const [pedidoCancelacion, setPedidoCancelacion] = useState(null);
-    const [cargandoCancelacion, setCargandoCancelacion] = useState(false);
     const [filtroTipo, setFiltroTipo] = useState('todos');
     const [filtroActor, setFiltroActor] = useState('');
     const [filtroDesde, setFiltroDesde] = useState('');
@@ -54,84 +45,22 @@ const VistaAdmin = () => {
     const [errorGeneral, setErrorGeneral] = useState('');
     const [cargando, setCargando] = useState(false);
 
-    const cargarDatos = async () => {
-        setCargando(true);
-        setErrorGeneral('');
+    const cargarDatos = () => {
         try {
-            // Intentar cargar desde API
-            const [prodRes, userRes, orderRes] = await Promise.allSettled([
-                getProducts(),
-                getUsers(),
-                getOrders({ pageSize: 1000 }) // Intentar traer todos para estadisticas
-            ]);
+            setCargando(true);
+            setErrorGeneral('');
+            const todosLosPedidos = obtenerTodosLosPedidos();
+            const todosLosUsuarios = obtenerTodosLosUsuarios();
+            const todosLosProductos = obtenerTodosLosProductos();
 
-            let todosLosProductos = [];
-            let todosLosUsuarios = [];
-            let todosLosPedidos = [];
-
-            // Log para diagnóstico
-            console.log('Carga Admin:', { prodRes, userRes, orderRes });
-
-            if (prodRes.status === 'fulfilled') {
-                const val = prodRes.value;
-                // Extracción robusta: array directo, obj.data array, o obj.data.data array
-                if (Array.isArray(val)) {
-                    todosLosProductos = val;
-                } else if (val?.data && Array.isArray(val.data)) {
-                    todosLosProductos = val.data;
-                } else if (val?.data?.data && Array.isArray(val.data.data)) {
-                    todosLosProductos = val.data.data;
-                } else {
-                    console.warn('Formato inesperado en productos:', val);
-                }
-            } else {
-                console.warn('Fallo carga API productos, usando local:', prodRes.reason);
-                todosLosProductos = obtenerTodosLosProductos();
-            }
-
-            if (userRes.status === 'fulfilled') {
-                const val = userRes.value;
-                if (Array.isArray(val)) {
-                    todosLosUsuarios = val;
-                } else if (val?.data && Array.isArray(val.data)) {
-                    todosLosUsuarios = val.data;
-                } else if (val?.data?.data && Array.isArray(val.data.data)) {
-                    todosLosUsuarios = val.data.data;
-                } else if (val?.user) { // Caso especial perfil único
-                     todosLosUsuarios = [val.user];
-                } else {
-                    console.warn('Formato inesperado en usuarios:', val);
-                }
-            } else {
-                console.warn('Fallo carga API usuarios, usando local:', userRes.reason);
-                todosLosUsuarios = obtenerTodosLosUsuarios();
-            }
-
-            if (orderRes.status === 'fulfilled') {
-                 const val = orderRes.value;
-                 if (Array.isArray(val)) {
-                    todosLosPedidos = val;
-                } else if (val?.data && Array.isArray(val.data)) {
-                    todosLosPedidos = val.data;
-                } else if (val?.data?.data && Array.isArray(val.data.data)) {
-                    todosLosPedidos = val.data.data;
-                } else {
-                    console.warn('Formato inesperado en pedidos:', val);
-                }
-            } else {
-                console.warn('Fallo carga API pedidos, usando local:', orderRes.reason);
-                todosLosPedidos = obtenerTodosLosPedidos();
-            }
-
-            setProductos(todosLosProductos);
             setUsuarios(todosLosUsuarios);
-            setPedidos(todosLosPedidos);
+            setProductos(todosLosProductos);
 
-            // Calcular Estadísticas
-            const ventasTotales = todosLosPedidos.reduce((suma, pedido) => suma + (pedido.total || 0), 0);
-            const pedidosActivos = todosLosPedidos.filter(p => p.estado !== 'Entregado' && p.estado !== 'Cancelado').length;
-            const cantidadRepartidores = todosLosUsuarios.filter(u => u.rol === 'repartidor').length;
-            const stockBajo = todosLosProductos.filter(p => p.stock < 10).length;
+        // Calcular Estadísticas
+        const ventasTotales = todosLosPedidos.reduce((suma, pedido) => suma + (pedido.total || 0), 0);
+        const pedidosActivos = todosLosPedidos.filter(p => p.estado !== 'Entregado' && p.estado !== 'Cancelado').length;
+        const cantidadRepartidores = todosLosUsuarios.filter(u => u.rol === 'repartidor').length;
+        const stockBajo = todosLosProductos.filter(p => p.stock < 10).length;
 
             setEstadisticas({
                 ventas: ventasTotales,
@@ -141,24 +70,13 @@ const VistaAdmin = () => {
             });
         } catch (err) {
             setErrorGeneral('Error cargando datos del panel: ' + err.message);
-            // Fallback total
-            try {
-                const todosLosPedidos = obtenerTodosLosPedidos();
-                const todosLosUsuarios = obtenerTodosLosUsuarios();
-                const todosLosProductos = obtenerTodosLosProductos();
-                setUsuarios(todosLosUsuarios);
-                setProductos(todosLosProductos);
-                setPedidos(todosLosPedidos);
-            } catch (localErr) {
-                console.error('Error fatal en fallback local', localErr);
-            }
         } finally {
             setCargando(false);
         }
     };
 
     // --- Acciones de Productos ---
-    const manejarGuardarProducto = async (e) => {
+    const manejarGuardarProducto = (e) => {
         e.preventDefault();
         setErrorProducto('');
         const datosFormulario = new FormData(e.target);
@@ -171,24 +89,14 @@ const VistaAdmin = () => {
 
         try {
             if (editandoProducto) {
-                try {
-                    await apiUpdateProduct(editandoProducto.id, { nombre, precio, categoria });
-                } catch (apiErr) {
-                    console.warn('API update failed, using local', apiErr);
-                    actualizarProducto(editandoProducto.id, {
-                        id,
-                        nombre: nombre,
-                        precio: precio,
-                        categoria: categoria
-                    });
-                }
+                actualizarProducto(editandoProducto.id, {
+                    id,
+                    nombre: nombre,
+                    precio: precio,
+                    categoria: categoria
+                });
             } else {
-                try {
-                    await apiCreateProduct({ id, nombre, precio, stock, categoria });
-                } catch (apiErr) {
-                    console.warn('API create failed, using local', apiErr);
-                    agregarProducto(id, nombre, precio, stock, categoria);
-                }
+                agregarProducto(id, nombre, precio, stock, categoria);
             }
             setMostrarModalProducto(false);
             setEditandoProducto(null);
@@ -204,14 +112,9 @@ const VistaAdmin = () => {
             titulo: 'Eliminar Producto',
             mensaje: `¿Eliminar el producto ${prod ? `"${prod.nombre}"` : id}? Esta acción no se puede deshacer.`,
             severidad: 'warning',
-            alConfirmar: async () => {
+            alConfirmar: () => {
                 try {
-                    try {
-                        await apiDeleteProduct(id);
-                    } catch (apiErr) {
-                        console.warn('API delete failed, using local', apiErr);
-                        eliminarProducto(id);
-                    }
+                    eliminarProducto(id);
                     cargarDatos();
                     mostrarNotificacion({ tipo: 'info', titulo: 'Producto eliminado', mensaje: 'Se eliminó correctamente.' });
                 } catch (err) {
@@ -222,7 +125,7 @@ const VistaAdmin = () => {
     };
 
     // --- Acciones de Usuario ---
-    const manejarGuardarUsuario = async (e) => {
+    const manejarGuardarUsuario = (e) => {
         e.preventDefault();
         setErrorUsuario('');
         const datosFormulario = new FormData(e.target);
@@ -238,26 +141,14 @@ const VistaAdmin = () => {
                 const rol = datosFormulario.get('rol');
                 const estado = datosFormulario.get('estado');
                 const telefono = datosFormulario.get('telefono');
-                
-                try {
-                    await apiCreateUser({ id, nombre, email, contrasena, rol, estado, telefono });
-                } catch (apiErr) {
-                    console.warn('API create user failed, using local', apiErr);
-                    adminCrearUsuario(admin.id, csrf, id, nombre, email, contrasena, rol, estado, telefono);
-                }
+                adminCrearUsuario(admin.id, csrf, id, nombre, email, contrasena, rol, estado, telefono);
             } else {
                 const nuevoId = datosFormulario.get('id');
                 const nombre = datosFormulario.get('nombre');
                 const email = datosFormulario.get('email');
                 const rol = datosFormulario.get('rol');
                 const campos = { id: nuevoId, nombre, email, rol };
-                
-                try {
-                    await apiUpdateUser(editandoUsuario.id, campos);
-                } catch (apiErr) {
-                    console.warn('API update user failed, using local', apiErr);
-                    adminActualizarUsuario(admin.id, csrf, editandoUsuario.id, campos);
-                }
+                adminActualizarUsuario(admin.id, csrf, editandoUsuario.id, campos);
             }
             setMostrarModalUsuario(false);
             setEditandoUsuario(null);
@@ -275,18 +166,11 @@ const VistaAdmin = () => {
             titulo: 'Cambiar Estado de Usuario',
             mensaje: `¿Cambiar estado de ${usuario.nombre} a "${nuevoEstadoEsp}"?`,
             severidad: 'warning',
-            alConfirmar: async () => {
+            alConfirmar: () => {
                 try {
                     const csrf = localStorage.getItem(CLAVES_BD.CSRF_TOKEN) || '';
                     const admin = obtenerUsuarioActual();
-                    
-                    try {
-                        await apiUpdateUser(usuario.id, { estado: nuevoEstadoEsp });
-                    } catch (apiErr) {
-                        console.warn('API user status update failed, using local', apiErr);
-                        adminActualizarUsuario(admin.id, csrf, usuario.id, { estado: nuevoEstadoEsp });
-                    }
-
+                    adminActualizarUsuario(admin.id, csrf, usuario.id, { estado: nuevoEstadoEsp });
                     cargarDatos();
                     mostrarNotificacion({ tipo: 'info', titulo: 'Estado actualizado', mensaje: 'El usuario fue actualizado.' });
                 } catch (err) {
@@ -301,18 +185,11 @@ const VistaAdmin = () => {
             titulo: 'Eliminar Usuario',
             mensaje: `¿Eliminar al usuario "${usuario.nombre}"? Esta acción no se puede deshacer.`,
             severidad: 'warning',
-            alConfirmar: async () => {
+            alConfirmar: () => {
                 try {
                     const csrf = localStorage.getItem(CLAVES_BD.CSRF_TOKEN) || '';
                     const admin = obtenerUsuarioActual();
-                    
-                    try {
-                        await apiDeleteUser(usuario.id);
-                    } catch (apiErr) {
-                        console.warn('API delete user failed, using local', apiErr);
-                        adminEliminarUsuario(admin.id, csrf, usuario.id);
-                    }
-
+                    adminEliminarUsuario(admin.id, csrf, usuario.id);
                     cargarDatos();
                     mostrarNotificacion({ tipo: 'info', titulo: 'Usuario eliminado', mensaje: 'Se eliminó correctamente.' });
                 } catch (err) {
@@ -338,7 +215,7 @@ const VistaAdmin = () => {
         setMostrarModalAsignacion(true);
     };
     
-    const manejarAsignarRepartidor = async (e) => {
+    const manejarAsignarRepartidor = (e) => {
         e.preventDefault();
         setErrorAsignacion('');
         if (!idRepartidorSeleccionado) {
@@ -346,41 +223,13 @@ const VistaAdmin = () => {
             return;
         }
         try {
-            try {
-                await apiAssignOrder(pedidoSeleccionado.id, idRepartidorSeleccionado);
-            } catch (apiErr) {
-                console.warn('API assign order failed, using local', apiErr);
-                asignarRepartidor(pedidoSeleccionado.id, idRepartidorSeleccionado);
-            }
-
+            asignarRepartidor(pedidoSeleccionado.id, idRepartidorSeleccionado);
             setMostrarModalAsignacion(false);
             setPedidoSeleccionado(null);
             setIdRepartidorSeleccionado('');
             cargarDatos();
         } catch (err) {
             setErrorAsignacion(err.message);
-        }
-    };
-
-    // Funciones Cancelación
-    const abrirModalCancelacion = (pedido) => {
-        setPedidoCancelacion(pedido);
-        setMostrarModalCancelacion(true);
-    };
-
-    const manejarConfirmarCancelacion = async () => {
-        if (!pedidoCancelacion) return;
-        setCargandoCancelacion(true);
-        try {
-             await apiCancelOrder(pedidoCancelacion.id);
-             mostrarNotificacion({ tipo: 'success', titulo: 'Éxito', mensaje: `Pedido ${pedidoCancelacion.id} cancelado correctamente.` });
-             setMostrarModalCancelacion(false);
-             setPedidoCancelacion(null);
-             cargarDatos();
-        } catch (err) {
-            mostrarNotificacion({ tipo: 'error', titulo: 'Error', mensaje: err.message || 'Error al cancelar el pedido.' });
-        } finally {
-            setCargandoCancelacion(false);
         }
     };
 
@@ -606,7 +455,6 @@ const VistaAdmin = () => {
                                         return (
                                             <React.Suspense fallback={<div className="alert alert-info">Cargando usuarios...</div>}>
                                                 <UsersTable
-                                                    data={usuarios}
                                                     onEditarUsuario={(u) => { setEditandoUsuario(u); setCreandoUsuario(false); setMostrarModalUsuario(true); }}
                                                     onAlternarEstadoUsuario={(u) => alternarEstadoUsuario(u)}
                                                     onEliminarUsuario={(u) => manejarEliminarUsuario(u)}
@@ -734,11 +582,7 @@ const VistaAdmin = () => {
                                 const OrdersTable = React.lazy(() => import('../components/OrdersTable'));
                                 return (
                                     <React.Suspense fallback={<div className="alert alert-info">Cargando pedidos...</div>}>
-                                        <OrdersTable 
-                                            data={pedidos} 
-                                            onAsignar={(p) => abrirModalAsignacionRepartidor(p)} 
-                                            onCancelar={(p) => abrirModalCancelacion(p)}
-                                        />
+                                        <OrdersTable onAsignar={(p) => abrirModalAsignacionRepartidor(p)} />
                                     </React.Suspense>
                                 );
                             })()}
@@ -933,47 +777,6 @@ const VistaAdmin = () => {
                                     <button type="submit" className="btn btn-primary">Asignar</button>
                                 </div>
                             </form>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Modal Cancelar Pedido */}
-            {mostrarModalCancelacion && pedidoCancelacion && (
-                <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setMostrarModalCancelacion(false)}>
-                    <div className="modal-dialog modal-dialog-centered" onClick={e => e.stopPropagation()}>
-                        <div className="modal-content">
-                            <div className="modal-header">
-                                <h5 className="modal-title">Confirmar Cancelación</h5>
-                                <button type="button" className="btn-close" onClick={() => setMostrarModalCancelacion(false)}></button>
-                            </div>
-                            <div className="modal-body">
-                                <p className="fw-bold mb-3">¿Está seguro de que desea cancelar este pedido?</p>
-                                <div className="alert alert-warning">
-                                    <ul className="mb-0">
-                                        <li><strong>ID Pedido:</strong> {pedidoCancelacion.id}</li>
-                                        <li><strong>Cliente:</strong> {pedidoCancelacion.nombreUsuario}</li>
-                                        <li><strong>Fecha:</strong> {new Date(pedidoCancelacion.fecha || Date.now()).toLocaleDateString()}</li>
-                                        <li><strong>Total:</strong> {aplicarFormatoMoneda(pedidoCancelacion.total)}</li>
-                                    </ul>
-                                </div>
-                                <p className="text-muted small mb-0 mt-3">Esta acción cambiará el estado del pedido a "Cancelado" y revertirá el stock de los productos asociados.</p>
-                            </div>
-                            <div className="modal-footer">
-                                <button type="button" className="btn btn-secondary" onClick={() => setMostrarModalCancelacion(false)} disabled={cargandoCancelacion}>
-                                    Volver
-                                </button>
-                                <button type="button" className="btn btn-danger" onClick={manejarConfirmarCancelacion} disabled={cargandoCancelacion}>
-                                    {cargandoCancelacion ? (
-                                        <>
-                                            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                            Cancelando...
-                                        </>
-                                    ) : (
-                                        'Sí, Cancelar Pedido'
-                                    )}
-                                </button>
-                            </div>
                         </div>
                     </div>
                 </div>

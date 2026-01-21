@@ -22,21 +22,36 @@ vi.mock('../utils/almacenamiento', () => ({
 
 vi.mock('../utils/autenticacion', () => ({ cerrarSesion: vi.fn() }));
 
-describe('Header - Acceso rápido a perfil', () => {
+describe('Header - Menú de usuario', () => {
   beforeEach(() => {
     localStorage.removeItem(CLAVES_BD.ACTIVITY_LOG);
     mockNavigate.mockReset();
     cleanup();
   });
 
-  it('navega a perfil al hacer clic en el botón de usuario', () => {
+  it('navega a perfil al seleccionar "Mi cuenta"', () => {
     render(
       <MemoryRouter>
         <Header />
       </MemoryRouter>
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /ir a mi cuenta/i }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /mi cuenta/i }));
     expect(mockNavigate).toHaveBeenCalledWith('/perfil');
+  });
+
+  it('registra evento y llama cerrarSesion al seleccionar "Cerrar sesión"', async () => {
+    const { cerrarSesion } = await import('../utils/autenticacion');
+    render(
+      <MemoryRouter>
+        <Header />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByRole('menuitem', { name: /cerrar sesión/i }));
+    expect(cerrarSesion).toHaveBeenCalled();
+
+    const log = JSON.parse(localStorage.getItem(CLAVES_BD.ACTIVITY_LOG) || '[]');
+    expect(log.some(e => e.tipo === 'menu_logout_click')).toBe(true);
   });
 });

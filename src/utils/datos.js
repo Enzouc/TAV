@@ -28,90 +28,6 @@ const parseSeguro = (valor, respaldo) => {
 };
 
 export const inicializarDatos = () => {
-    // Definición de productos base correcta
-    const productosIniciales = [
-        { 
-            id: '#P001', 
-            nombre: 'Gas 11 Kg', 
-            precio: 14500, 
-            stock: 50, 
-            categoria: 'Normal',
-            descripcion: 'Cilindro de gas licuado de 11kg, ideal para estufas y cocinas domésticas. Formato tradicional y versátil para el hogar.'
-        },
-        { 
-            id: '#P002', 
-            nombre: 'Gas 15 Kg', 
-            precio: 19000, 
-            stock: 30, 
-            categoria: 'Normal',
-            descripcion: 'Cilindro de 15kg con mayor autonomía. Perfecto para familias medianas y uso constante en calefacción y cocina.'
-        },
-        { 
-            id: '#P003', 
-            nombre: 'Gas 45 Kg', 
-            precio: 58000, 
-            stock: 5, 
-            categoria: 'Industrial',
-            descripcion: 'Gran capacidad de 45kg para alto consumo. Recomendado para comercios, restaurantes o sistemas de calefacción central.'
-        },
-        { 
-            id: '#P004', 
-            nombre: 'Gas 5 Kg', 
-            precio: 8000, 
-            stock: 100, 
-            categoria: 'Camping',
-            descripcion: 'Formato portátil de 5kg. Ligero y fácil de transportar, esencial para camping, parrillas móviles y estufas pequeñas.'
-        },
-        { 
-            id: '#P005', 
-            nombre: 'Catalítico 11 Kg', 
-            precio: 15500, 
-            stock: 20, 
-            categoria: 'Catalítico',
-            descripcion: 'Cilindro especial para estufas catalíticas. Conexión rápida y segura para mantener tu hogar cálido en invierno.'
-        }
-    ];
-
-    // Validación y corrección de productos
-    const productosExistentesRaw = localStorage.getItem(CLAVES_BD.PRODUCTOS);
-    let productosValidos = false;
-    
-    if (productosExistentesRaw) {
-        try {
-            const productos = JSON.parse(productosExistentesRaw);
-            if (Array.isArray(productos) && productos.length > 0) {
-                // Verificar integridad: IDs únicos y datos válidos
-                const ids = new Set();
-                const tieneDuplicados = productos.some(p => {
-                    if (ids.has(p.id)) return true;
-                    ids.add(p.id);
-                    return false;
-                });
-                
-                const tieneDatosInvalidos = productos.some(p => 
-                    !p.nombre || 
-                    !p.id || 
-                    isNaN(Number(p.precio)) || 
-                    Number(p.precio) <= 0
-                );
-
-                // Si todo está bien, marcamos como válidos. 
-                // Si hay duplicados o datos malos, dejaremos productosValidos en false para que se resetee.
-                if (!tieneDuplicados && !tieneDatosInvalidos && productos.length <= 10) {
-                    productosValidos = true;
-                }
-            }
-        } catch (e) {
-            console.warn('Datos de productos corruptos, se resetearán.');
-        }
-    }
-
-    // Si no existen o son inválidos/corruptos, resetear
-    if (!productosExistentesRaw || !productosValidos) {
-        console.log('Inicializando o reparando base de datos de productos...');
-        localStorage.setItem(CLAVES_BD.PRODUCTOS, JSON.stringify(productosIniciales));
-    }
-
     if (!localStorage.getItem(CLAVES_BD.USUARIOS)) {
         const usuariosIniciales = [
             {
@@ -180,6 +96,52 @@ export const inicializarDatos = () => {
             });
             localStorage.setItem(CLAVES_BD.USUARIOS, JSON.stringify(usuarios));
         }
+    }
+
+    if (!localStorage.getItem(CLAVES_BD.PRODUCTOS)) {
+        const productosIniciales = [
+            { 
+                id: '#P001', 
+                nombre: 'Gas 11 Kg', 
+                precio: 14500, 
+                stock: 50, 
+                categoria: 'Normal',
+                descripcion: 'Cilindro de gas licuado de 11kg, ideal para estufas y cocinas domésticas. Formato tradicional y versátil para el hogar.'
+            },
+            { 
+                id: '#P002', 
+                nombre: 'Gas 15 Kg', 
+                precio: 19000, 
+                stock: 30, 
+                categoria: 'Normal',
+                descripcion: 'Cilindro de 15kg con mayor autonomía. Perfecto para familias medianas y uso constante en calefacción y cocina.'
+            },
+            { 
+                id: '#P003', 
+                nombre: 'Gas 45 Kg', 
+                precio: 58000, 
+                stock: 5, 
+                categoria: 'Industrial',
+                descripcion: 'Gran capacidad de 45kg para alto consumo. Recomendado para comercios, restaurantes o sistemas de calefacción central.'
+            },
+            { 
+                id: '#P004', 
+                nombre: 'Gas 5 Kg', 
+                precio: 8000, 
+                stock: 100, 
+                categoria: 'Camping',
+                descripcion: 'Formato portátil de 5kg. Ligero y fácil de transportar, esencial para camping, parrillas móviles y estufas pequeñas.'
+            },
+            { 
+                id: '#P005', 
+                nombre: 'Catalítico 11 Kg', 
+                precio: 15500, 
+                stock: 20, 
+                categoria: 'Catalítico',
+                descripcion: 'Cilindro especial para estufas catalíticas. Conexión rápida y segura para mantener tu hogar cálido en invierno.'
+            }
+        ];
+        localStorage.setItem(CLAVES_BD.PRODUCTOS, JSON.stringify(productosIniciales));
     }
 
     if (!localStorage.getItem(CLAVES_BD.PEDIDOS)) {

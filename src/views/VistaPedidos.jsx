@@ -2,32 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { obtenerUsuarioActual } from '../utils/almacenamiento';
 import { obtenerPedidosPorUsuario } from '../utils/pedido';
 import { aplicarFormatoMoneda } from '../utils/datos';
-import { getOrders } from '../services/ordersService';
 
 const VistaPedidos = () => {
     const [pedidos, setPedidos] = useState([]);
     const [usuario, setUsuario] = useState(obtenerUsuarioActual());
 
     useEffect(() => {
-        const controller = new AbortController();
-        const loadOrders = async () => {
-            if (usuario) {
-                try {
-                    const res = await getOrders({ userId: usuario.id, pageSize: 50 }, controller.signal);
-                    const apiOrders = Array.isArray(res.data) ? res.data : res.data.data || [];
-                    // Asegurar ordenamiento si el API no lo garantiza
-                    setPedidos(apiOrders.sort((a, b) => new Date(b.fecha) - new Date(a.fecha)));
-                } catch (e) {
-                    if (e.name !== 'Canceled') {
-                        console.warn('API orders error, fallback to local', e);
-                        const misPedidos = obtenerPedidosPorUsuario(usuario.id);
-                        setPedidos(misPedidos.reverse());
-                    }
-                }
-            }
-        };
-        loadOrders();
-        return () => controller.abort();
+        if (usuario) {
+            const misPedidos = obtenerPedidosPorUsuario(usuario.id);
+            // Ordenar por fecha desc
+            setPedidos(misPedidos.reverse());
+        }
     }, [usuario]);
 
     const obtenerClaseEstado = (estado) => {

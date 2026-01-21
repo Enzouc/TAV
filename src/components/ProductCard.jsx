@@ -1,6 +1,20 @@
 import React from 'react';
 import { aplicarFormatoMoneda } from '../utils/datos';
-import { obtenerImagenProducto } from '../utils/producto';
+
+const obtenerImagen = (nombre) => {
+  if (!nombre) return 'productos_gas/producto-gas-15-kg.png';
+  const nm = String(nombre).toLowerCase();
+  if (nm.includes('catalítico') || nm.includes('catalitico')) {
+    return 'productos_gas/producto-gas-catalitico-11-kg.jpg';
+  }
+  const match = nm.match(/(\d+)\s*kg/);
+  const peso = match ? parseInt(match[1], 10) : null;
+  if (peso === 5) return 'productos_gas/producto-gas-5-kg.png';
+  if (peso === 11) return 'productos_gas/producto-gas-11-kg.png';
+  if (peso === 15) return 'productos_gas/producto-gas-15-kg.png';
+  if (peso === 45) return 'productos_gas/producto-gas-45-kg.png';
+  return 'productos_gas/producto-gas-15-kg.png';
+};
 
 const badgeColor = (categoria) => {
   switch (categoria) {
@@ -14,7 +28,7 @@ const badgeColor = (categoria) => {
 const ProductCard = ({ product, view = 'grid', onClick, className = '', style = {} }) => {
   const clickable = product.stock > 0 && typeof onClick === 'function';
   const handleClick = () => clickable && onClick(product);
-  const imagenSrc = product.imagen || obtenerImagenProducto(product.nombre);
+  const imagenSrc = product.imagen || obtenerImagen(product.nombre);
 
   return (
     <div
@@ -23,7 +37,6 @@ const ProductCard = ({ product, view = 'grid', onClick, className = '', style = 
       style={{ cursor: clickable ? 'pointer' : 'default', transition: 'all 0.3s ease', ...style }}
       role={clickable ? 'button' : undefined}
       aria-disabled={product.stock <= 0}
-      aria-label={`Ver detalle de ${product.nombre}`}
     >
       <div className="position-relative overflow-hidden rounded-top">
         <div className="d-flex justify-content-between position-absolute top-0 w-100 p-2">
@@ -51,9 +64,7 @@ const ProductCard = ({ product, view = 'grid', onClick, className = '', style = 
         </p>
         {view === 'grid' && (
           <div className="d-flex align-items-center justify-content-between mt-2">
-            <span className="h5 mb-0 text-primary fw-bold">
-              {isNaN(product.precio) ? 'Consultar' : aplicarFormatoMoneda(product.precio)}
-            </span>
+            <span className="h5 mb-0 text-primary fw-bold">{aplicarFormatoMoneda(product.precio)}</span>
           </div>
         )}
         <div className="mt-3 pt-3 border-top d-flex align-items-center justify-content-between">

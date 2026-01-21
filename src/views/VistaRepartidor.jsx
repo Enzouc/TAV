@@ -5,7 +5,6 @@ import { CLAVES_BD } from '../utils/datos';
 import { obtenerPedidosPorRepartidor, actualizarEstadoPedido } from '../utils/pedido';
 import { aplicarFormatoMoneda } from '../utils/datos';
 import { usarUI } from '../components/ContextoUI';
-import { getOrders, updateOrderStatus } from '../services/ordersService';
 
 const VistaRepartidor = () => {
     const [pedidos, setPedidos] = useState([]);
@@ -15,30 +14,14 @@ const VistaRepartidor = () => {
     const navegar = useNavigate();
 
     useEffect(() => {
-        const controller = new AbortController();
-        cargarPedidos(controller.signal);
-        return () => controller.abort();
+        cargarPedidos();
     }, []);
 
-    const cargarPedidos = async (signal) => {
+    const cargarPedidos = () => {
         if (!usuario) return;
         
-        try {
-            // Intentar cargar desde API
-            const res = await getOrders({ repartidor: usuario.id, pageSize: 100 }, signal);
-            const apiOrders = Array.isArray(res.data) ? res.data : res.data.data || [];
-            procesarPedidos(apiOrders);
-        } catch (e) {
-            if (e.name !== 'Canceled') {
-                console.warn('API orders error, fallback to local', e);
-                const misPedidos = obtenerPedidosPorRepartidor(usuario.id);
-                procesarPedidos(misPedidos);
-            }
-        }
-    };
-
-    const procesarPedidos = (listaPedidos) => {
-        const misPedidos = listaPedidos.filter(p => p.estado !== 'Cancelado');
+        // Usar lógica modular para obtener pedidos
+        const misPedidos = obtenerPedidosPorRepartidor(usuario.id).filter(p => p.estado !== 'Cancelado');
         
         // Estadísticas
         const conteoEnRuta = misPedidos.filter(p => p.estado === 'En Camino').length;
@@ -57,15 +40,9 @@ const VistaRepartidor = () => {
             titulo: 'Cambiar estado',
             mensaje: `¿Cambiar estado del pedido a "${nuevoEstado}"?`,
             severidad: 'warning',
-            alConfirmar: async () => {
+            alConfirmar: () => {
                 try {
-                    try {
-                        await updateOrderStatus(idPedido, nuevoEstado);
-                    } catch (apiErr) {
-                         console.warn('API update status failed, using local', apiErr);
-                         actualizarEstadoPedido(idPedido, nuevoEstado);
-                    }
-                    
+                    actualizarEstadoPedido(idPedido, nuevoEstado);
                     cargarPedidos();
                     mostrarNotificacion({ tipo: 'info', titulo: 'Estado actualizado', mensaje: `El pedido ahora está "${nuevoEstado}".` });
                 } catch (error) {
@@ -87,7 +64,7 @@ const VistaRepartidor = () => {
             <div className="d-flex justify-content-between align-items-center mb-4">
                 <h2>🚚 Panel Repartidor</h2>
                 <div className="d-flex align-items-center gap-2">
-                    <span className="badge bg-dark fs-6">{usuario ? usuario.nombre : 'Repartidor'}</span>
+                    <span className="badge bg-dark fs-6">{usuario.nombre}</span>
                     <button
                         className="btn btn-outline-danger btn-sm"
                         onClick={() => {

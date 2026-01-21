@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { crearUsuario, autenticarUsuario } from '../utils/usuario';
 import { guardarUsuarioActual } from '../utils/almacenamiento';
-import { register, login } from '../services/usersService';
 import { usarUI } from '../components/ContextoUI';
 
 const VistaRegistro = () => {
@@ -20,7 +19,6 @@ const VistaRegistro = () => {
         comuna: ''
     });
     const [error, setError] = useState('');
-    const [cargando, setCargando] = useState(false);
 
     const manejarCambio = (e) => {
         setDatosFormulario({
@@ -29,20 +27,17 @@ const VistaRegistro = () => {
         });
     };
 
-    const manejarEnvio = async (e) => {
+    const manejarEnvio = (e) => {
         e.preventDefault();
         setError('');
-        setCargando(true);
 
         if (datosFormulario.contrasena !== datosFormulario.confirmarContrasena) {
             setError('Las contraseñas no coinciden');
-            setCargando(false);
             return;
         }
 
-        const controller = new AbortController();
-
         try {
+            // Crear usuario
             const direccion = {
                 calle: datosFormulario.calle,
                 numero: datosFormulario.numero,
@@ -50,61 +45,25 @@ const VistaRegistro = () => {
                 comuna: datosFormulario.comuna
             };
 
-            const datosRegistro = {
-                nombre: datosFormulario.nombre,
-                email: datosFormulario.email,
-                contrasena: datosFormulario.contrasena,
-                rol: 'usuario', // Por defecto
-                telefono: datosFormulario.telefono,
+            crearUsuario(
+                null, 
+                datosFormulario.nombre, 
+                datosFormulario.email, 
+                datosFormulario.contrasena, 
+                'usuario', 
+                'activo', 
+                datosFormulario.telefono, 
                 direccion
-            };
+            );
 
-            // Intento Registro API
-            try {
-                await register(datosRegistro, controller.signal);
-                
-                // Auto login API
-                const respLogin = await login({ 
-                    email: datosFormulario.email, 
-                    contrasena: datosFormulario.contrasena 
-                }, controller.signal);
-                
-                const usuario = respLogin.user || respLogin.usuario;
-                if (usuario) guardarUsuarioActual(usuario);
+            // Auto iniciar sesión
+            const usuario = autenticarUsuario(datosFormulario.email, datosFormulario.contrasena);
+            guardarUsuarioActual(usuario);
 
-                mostrarNotificacion({ tipo: 'info', titulo: 'Registro exitoso', mensaje: '¡Cuenta creada con éxito!' });
-                navegar('/');
-            } catch (apiErr) {
-                 // Si falla API (red o 404), fallback local
-                 if (!apiErr.status || apiErr.status === 404 || apiErr.status >= 500) {
-                    console.warn('API registro falló, usando local:', apiErr);
-                    
-                    crearUsuario(
-                        null, 
-                        datosFormulario.nombre, 
-                        datosFormulario.email, 
-                        datosFormulario.contrasena, 
-                        'usuario', 
-                        'activo', 
-                        datosFormulario.telefono, 
-                        direccion
-                    );
-
-                    // Auto iniciar sesión local
-                    const usuario = autenticarUsuario(datosFormulario.email, datosFormulario.contrasena);
-                    guardarUsuarioActual(usuario);
-
-                    mostrarNotificacion({ tipo: 'info', titulo: 'Registro exitoso', mensaje: '¡Cuenta creada con éxito (Local)!' });
-                    navegar('/');
-                 } else {
-                     throw apiErr;
-                 }
-            }
-
+            mostrarNotificacion({ tipo: 'info', titulo: 'Registro exitoso', mensaje: '¡Cuenta creada con éxito!' });
+            navegar('/');
         } catch (err) {
-            setError(err.message || 'Error al registrar usuario');
-        } finally {
-            if (!controller.signal.aborted) setCargando(false);
+            setError(err.message);
         }
     };
 

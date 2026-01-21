@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { obtenerUsuarioActual, obtenerCarrito } from '../utils/almacenamiento';
+import { cerrarSesion } from '../utils/autenticacion';
 import { CLAVES_BD } from '../utils/datos';
 import '../styles/header.css';
 
@@ -8,6 +9,8 @@ const Header = () => {
     const navegar = useNavigate();
     const [usuario, setUsuario] = useState(obtenerUsuarioActual());
     const [cantidadCarrito, setCantidadCarrito] = useState(0);
+    const toggleRef = useRef(null);
+    const menuRef = useRef(null);
 
     const actualizarAutenticacion = () => setUsuario(obtenerUsuarioActual());
     const actualizarCarrito = () => {
@@ -28,6 +31,23 @@ const Header = () => {
             window.removeEventListener('carrito-actualizado', actualizarCarrito);
         };
     }, []);
+    useEffect(() => {
+        const btn = toggleRef.current;
+        if (!btn) return;
+        const handleShown = () => {
+            const firstItem = menuRef.current?.querySelector('a,button');
+            firstItem?.focus();
+        };
+        const handleHidden = () => {
+            btn.focus();
+        };
+        btn.addEventListener('shown.bs.dropdown', handleShown);
+        btn.addEventListener('hidden.bs.dropdown', handleHidden);
+        return () => {
+            btn.removeEventListener('shown.bs.dropdown', handleShown);
+            btn.removeEventListener('hidden.bs.dropdown', handleHidden);
+        };
+    }, []);
 
     const trackEvent = (tipo, detalle = {}) => {
         try {
@@ -37,6 +57,10 @@ const Header = () => {
         } catch {}
     };
 
+    const manejarCierreSesion = () => {
+        trackEvent('menu_logout_click', { idUsuario: usuario?.id });
+        cerrarSesion();
+    };
     const manejarMiCuenta = () => {
         trackEvent('menu_profile_click', { idUsuario: usuario?.id });
         navegar('/perfil');
@@ -60,24 +84,44 @@ const Header = () => {
                     🛒 Carrito ({cantidadCarrito})
                 </button>
                 
-                {usuario && usuario.nombre ? (
-                    <button
-                        className="btn-nav btn-outline"
-                        type="button"
-                        onClick={manejarMiCuenta}
-                        aria-label="Ir a mi cuenta"
-                    >
-                        👤 {usuario.nombre.split(' ')[0]}
-                    </button>
-                ) : usuario ? (
-                    <button
-                        className="btn-nav btn-outline"
-                        type="button"
-                        onClick={manejarMiCuenta}
-                        aria-label="Ir a mi cuenta"
-                    >
-                        👤 Usuario
-                    </button>
+                {usuario ? (
+                    <div className="dropdown d-inline-block">
+                        <button
+                            ref={toggleRef}
+                            className="btn-nav btn-outline dropdown-toggle"
+                            type="button"
+                            data-bs-toggle="dropdown"
+                            aria-haspopup="menu"
+                            aria-controls="menu-usuario"
+                        >
+                            👤 {usuario.nombre.split(' ')[0]}
+                        </button>
+                        <ul
+                            id="menu-usuario"
+                            ref={menuRef}
+                            className="dropdown-menu dropdown-menu-end fade-soft"
+                            role="menu"
+                            aria-label="Menú de usuario"
+                        >
+                            <li>
+                                <button className="dropdown-item" role="menuitem" onClick={manejarMiCuenta}>
+                                    👤 Mi cuenta
+                                </button>
+                            </li>
+                            {usuario.rol === 'repartidor' && (
+                                <li><Link className="dropdown-item" role="menuitem" to="/repartidor">🚚 Panel Repartidor</Link></li>
+                            )}
+                            {usuario.rol === 'admin' && (
+                                <li><Link className="dropdown-item" role="menuitem" to="/admin">🛠️ Panel Admin</Link></li>
+                            )}
+                            <li><hr className="dropdown-divider" /></li>
+                            <li>
+                                <button className="dropdown-item text-danger" role="menuitem" onClick={manejarCierreSesion}>
+                                    🚪 Cerrar sesión
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
                 ) : (
                     <button className="btn-nav btn-outline" onClick={() => navegar('/iniciar-sesion')}>
                         👤 Iniciar Sesión

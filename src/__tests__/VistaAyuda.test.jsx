@@ -10,8 +10,7 @@ describe('VistaAyuda', () => {
         <VistaAyuda />
       </MemoryRouter>
     );
-    // Uso de getAllByText para evitar errores si hay múltiples elementos "Ayuda" (ej. en el menú y en el título)
-    expect(screen.getAllByText('Ayuda').length).toBeGreaterThan(0);
+    expect(screen.getByText('Ayuda')).toBeTruthy();
     expect(screen.getByPlaceholderText('Describe tu problema...')).toBeTruthy();
     expect(screen.getByText('Enviar mensaje')).toBeTruthy();
   });

@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { obtenerCarrito, guardarCarrito, obtenerUsuarioActual } from '../utils/almacenamiento';
-import { crearPedido as crearPedidoLocal } from '../utils/pedido'; // Renamed for fallback
-import { createOrder } from '../services/ordersService'; // Import service
+import { crearPedido } from '../utils/pedido';
 import { crearDetallePedido } from '../utils/detallePedido';
 import { usarUI } from '../components/ContextoUI';
-import Modal from '../components/Modal.jsx';
 
 const VistaCarrito = () => {
     const navegar = useNavigate();
@@ -14,8 +12,6 @@ const VistaCarrito = () => {
     const [cargando, setCargando] = useState(true);
     const [error, setError] = useState('');
     const { mostrarNotificacion } = usarUI();
-    const [modalPagoAbierto, setModalPagoAbierto] = useState(false);
-    const [metodoPago, setMetodoPago] = useState('');
 
     useEffect(() => {
         try {
@@ -58,76 +54,44 @@ const VistaCarrito = () => {
 
         if (carrito.length === 0) return;
 
-        setMetodoPago('');
-        setModalPagoAbierto(true);
-    };
-
-    const confirmarPago = async () => {
-        if (!metodoPago) return;
         try {
-            const elementos = carrito.map(item =>
+            // Preparar detalles usando lógica de detallePedido
+            const elementos = carrito.map(item => 
                 crearDetallePedido(item.id, item.nombre, item.cantidad, item.precio)
             );
+
+            // Calcular total
             const total = elementos.reduce((suma, item) => suma + item.subtotal, 0);
-            const direccionStr = usuario.direccion ? `${usuario.direccion.calle} ${usuario.direccion.numero}, ${usuario.direccion.comuna}` : 'Dirección no registrada';
-            
-            // Prepare data for API
-            const orderData = {
-                id_usuario: usuario.id,
-                nombre_usuario: usuario.nombre,
-                direccion_envio: direccionStr,
-                metodo_pago: metodoPago,
-                total: total,
-                items: carrito.map(item => ({
-                    id_producto: item.id,
-                    cantidad: item.cantidad,
-                    precio_unitario: item.precio,
-                    nombre_producto: item.nombre
-                }))
-            };
 
-            try {
-                // Try API first
-                await createOrder(orderData);
-                mostrarNotificacion({ tipo: 'info', titulo: 'Pedido realizado', mensaje: 'Tu pedido fue creado con éxito.' });
-            } catch (apiError) {
-                console.warn('API createOrder failed:', apiError);
-
-                // Check for Client Errors (400 Bad Request, 404 Not Found)
-                // These indicate invalid data (e.g., insufficient stock), so we should NOT fallback to local.
-                const status = apiError.response?.status || apiError.status;
-                if (status === 400 || status === 404) {
-                    const mensajeError = apiError.response?.data?.message || apiError.message || 'Error en los datos del pedido.';
-                    mostrarNotificacion({ tipo: 'error', titulo: 'Error al procesar', mensaje: mensajeError });
-                    // Close modal but keep cart so user can fix it (e.g. reduce quantity)
-                    setModalPagoAbierto(false);
-                    return; 
-                }
-
-                console.warn('Falling back to local storage due to network/server error.');
-                // Fallback to local storage only for Network/Server errors
-                const idPedido = '#ORD-' + Date.now().toString().slice(-6);
-                crearPedidoLocal(
-                    idPedido,
-                    usuario.id,
-                    usuario.nombre,
-                    usuario.telefono || '',
-                    direccionStr,
-                    total,
-                    'Pendiente',
-                    null,
-                    null,
-                    metodoPago,
-                    elementos
-                );
-                mostrarNotificacion({ tipo: 'warning', titulo: 'Modo Offline', mensaje: 'Tu pedido se guardó localmente debido a problemas de conexión.' });
+            // Determinar repartidor (lógica simplificada conservada)
+            let idRepartidor = null;
+            if (usuario.direccion && usuario.direccion.comuna === 'Concepción') {
+                idRepartidor = '#R050'; 
             }
 
-            guardarCarrito([]);
-            setModalPagoAbierto(false);
+            const direccionStr = usuario.direccion ? `${usuario.direccion.calle} ${usuario.direccion.numero}, ${usuario.direccion.comuna}` : 'Dirección no registrada';
+            const idPedido = '#ORD-' + Date.now().toString().slice(-6);
+
+            // Crear pedido usando lógica de pedido
+            crearPedido(
+                idPedido,
+                usuario.id,
+                usuario.nombre,
+                usuario.telefono || '',
+                direccionStr,
+                total,
+                'Pendiente',
+                idRepartidor,
+                null, // la fecha por defecto es ahora
+                'Efectivo',
+                elementos
+            );
+
+            guardarCarrito([]); // Limpiar carrito
+            mostrarNotificacion({ tipo: 'info', titulo: 'Pedido realizado', mensaje: 'Tu pedido fue creado con éxito.' });
             navegar('/pedidos');
         } catch (error) {
-            console.error(error);
+            console.error('Error al crear el pedido:', error);
             mostrarNotificacion({ tipo: 'error', titulo: 'Error', mensaje: 'Hubo un error al procesar tu pedido. Inténtalo de nuevo.' });
         }
     };
@@ -210,64 +174,6 @@ const VistaCarrito = () => {
                     </div>
                 </div>
             )}
-            <Modal
-                abierto={modalPagoAbierto}
-                titulo="Selecciona método de pago"
-                mensaje=""
-                severidad="info"
-                etiquetaConfirmar="Continuar"
-                etiquetaCancelar="Cancelar"
-                alCancelar={() => setModalPagoAbierto(false)}
-                alConfirmar={confirmarPago}
-            >
-                <div className="list-group">
-                    <label className={`list-group-item d-flex align-items-center ${metodoPago === 'Efectivo' ? 'active' : ''}`} style={{ cursor: 'pointer' }}>
-                        <input
-                            type="radio"
-                            name="metodo-pago"
-                            className="form-check-input me-3"
-                            checked={metodoPago === 'Efectivo'}
-                            onChange={() => setMetodoPago('Efectivo')}
-                            aria-label="Efectivo"
-                        />
-                        <span className="me-2">💵</span>
-                        <div>
-                            <div className="fw-bold">Efectivo</div>
-                            <div className="text-muted small">Pago al recibir el pedido.</div>
-                        </div>
-                    </label>
-                    <label className={`list-group-item d-flex align-items-center ${metodoPago === 'Tarjeta' ? 'active' : ''}`} style={{ cursor: 'pointer' }}>
-                        <input
-                            type="radio"
-                            name="metodo-pago"
-                            className="form-check-input me-3"
-                            checked={metodoPago === 'Tarjeta'}
-                            onChange={() => setMetodoPago('Tarjeta')}
-                            aria-label="Tarjeta"
-                        />
-                        <span className="me-2">💳</span>
-                        <div>
-                            <div className="fw-bold">Tarjeta</div>
-                            <div className="text-muted small">Crédito o débito vía lector móvil.</div>
-                        </div>
-                    </label>
-                    <label className={`list-group-item d-flex align-items-center ${metodoPago === 'Transferencia' ? 'active' : ''}`} style={{ cursor: 'pointer' }}>
-                        <input
-                            type="radio"
-                            name="metodo-pago"
-                            className="form-check-input me-3"
-                            checked={metodoPago === 'Transferencia'}
-                            onChange={() => setMetodoPago('Transferencia')}
-                            aria-label="Transferencia"
-                        />
-                        <span className="me-2">🔁</span>
-                        <div>
-                            <div className="fw-bold">Transferencia</div>
-                            <div className="text-muted small">Transferencia bancaria previa a la entrega.</div>
-                        </div>
-                    </label>
-                </div>
-            </Modal>
         </div>
     );
 };
