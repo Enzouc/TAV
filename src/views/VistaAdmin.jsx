@@ -6,6 +6,9 @@ import { obtenerTodosLosProductos, agregarProducto, eliminarProducto, actualizar
 import { obtenerTodosLosPedidos, asignarRepartidor } from '../utils/pedido';
 import { usarUI } from '../components/ContextoUI';
 import { obtenerUsuarioActual } from '../utils/almacenamiento';
+import { getProducts, createProduct as apiCreateProduct, updateProduct as apiUpdateProduct, deleteProduct as apiDeleteProduct } from '../services/productsService';
+import { getUsers, createUser as apiCreateUser, updateUser as apiUpdateUser, deleteUser as apiDeleteUser } from '../services/usersService';
+import { getOrders, assignOrder as apiAssignOrder } from '../services/ordersService';
 
 const VistaAdmin = () => {
     const [seccionActiva, setSeccionActiva] = useState('dashboard');
@@ -13,6 +16,7 @@ const VistaAdmin = () => {
     const [estadisticas, setEstadisticas] = useState({ ventas: 0, pedidosActivos: 0, repartidores: 0, bajoStock: 0 });
     const [productos, setProductos] = useState([]);
     const [usuarios, setUsuarios] = useState([]);
+    const [pedidos, setPedidos] = useState([]); // Nuevo estado para pedidos
     
     const [mostrarModalProducto, setMostrarModalProducto] = useState(false);
     const [mostrarModalUsuario, setMostrarModalUsuario] = useState(false);
@@ -45,22 +49,84 @@ const VistaAdmin = () => {
     const [errorGeneral, setErrorGeneral] = useState('');
     const [cargando, setCargando] = useState(false);
 
-    const cargarDatos = () => {
+    const cargarDatos = async () => {
+        setCargando(true);
+        setErrorGeneral('');
         try {
-            setCargando(true);
-            setErrorGeneral('');
-            const todosLosPedidos = obtenerTodosLosPedidos();
-            const todosLosUsuarios = obtenerTodosLosUsuarios();
-            const todosLosProductos = obtenerTodosLosProductos();
+            // Intentar cargar desde API
+            const [prodRes, userRes, orderRes] = await Promise.allSettled([
+                getProducts(),
+                getUsers(),
+                getOrders({ pageSize: 1000 }) // Intentar traer todos para estadisticas
+            ]);
 
-            setUsuarios(todosLosUsuarios);
+            let todosLosProductos = [];
+            let todosLosUsuarios = [];
+            let todosLosPedidos = [];
+
+            // Log para diagnóstico
+            console.log('Carga Admin:', { prodRes, userRes, orderRes });
+
+            if (prodRes.status === 'fulfilled') {
+                const val = prodRes.value;
+                // Extracción robusta: array directo, obj.data array, o obj.data.data array
+                if (Array.isArray(val)) {
+                    todosLosProductos = val;
+                } else if (val?.data && Array.isArray(val.data)) {
+                    todosLosProductos = val.data;
+                } else if (val?.data?.data && Array.isArray(val.data.data)) {
+                    todosLosProductos = val.data.data;
+                } else {
+                    console.warn('Formato inesperado en productos:', val);
+                }
+            } else {
+                console.warn('Fallo carga API productos, usando local:', prodRes.reason);
+                todosLosProductos = obtenerTodosLosProductos();
+            }
+
+            if (userRes.status === 'fulfilled') {
+                const val = userRes.value;
+                if (Array.isArray(val)) {
+                    todosLosUsuarios = val;
+                } else if (val?.data && Array.isArray(val.data)) {
+                    todosLosUsuarios = val.data;
+                } else if (val?.data?.data && Array.isArray(val.data.data)) {
+                    todosLosUsuarios = val.data.data;
+                } else if (val?.user) { // Caso especial perfil único
+                     todosLosUsuarios = [val.user];
+                } else {
+                    console.warn('Formato inesperado en usuarios:', val);
+                }
+            } else {
+                console.warn('Fallo carga API usuarios, usando local:', userRes.reason);
+                todosLosUsuarios = obtenerTodosLosUsuarios();
+            }
+
+            if (orderRes.status === 'fulfilled') {
+                 const val = orderRes.value;
+                 if (Array.isArray(val)) {
+                    todosLosPedidos = val;
+                } else if (val?.data && Array.isArray(val.data)) {
+                    todosLosPedidos = val.data;
+                } else if (val?.data?.data && Array.isArray(val.data.data)) {
+                    todosLosPedidos = val.data.data;
+                } else {
+                    console.warn('Formato inesperado en pedidos:', val);
+                }
+            } else {
+                console.warn('Fallo carga API pedidos, usando local:', orderRes.reason);
+                todosLosPedidos = obtenerTodosLosPedidos();
+            }
+
             setProductos(todosLosProductos);
+            setUsuarios(todosLosUsuarios);
+            setPedidos(todosLosPedidos);
 
-        // Calcular Estadísticas
-        const ventasTotales = todosLosPedidos.reduce((suma, pedido) => suma + (pedido.total || 0), 0);
-        const pedidosActivos = todosLosPedidos.filter(p => p.estado !== 'Entregado' && p.estado !== 'Cancelado').length;
-        const cantidadRepartidores = todosLosUsuarios.filter(u => u.rol === 'repartidor').length;
-        const stockBajo = todosLosProductos.filter(p => p.stock < 10).length;
+            // Calcular Estadísticas
+            const ventasTotales = todosLosPedidos.reduce((suma, pedido) => suma + (pedido.total || 0), 0);
+            const pedidosActivos = todosLosPedidos.filter(p => p.estado !== 'Entregado' && p.estado !== 'Cancelado').length;
+            const cantidadRepartidores = todosLosUsuarios.filter(u => u.rol === 'repartidor').length;
+            const stockBajo = todosLosProductos.filter(p => p.stock < 10).length;
 
             setEstadisticas({
                 ventas: ventasTotales,
@@ -70,13 +136,24 @@ const VistaAdmin = () => {
             });
         } catch (err) {
             setErrorGeneral('Error cargando datos del panel: ' + err.message);
+            // Fallback total
+            try {
+                const todosLosPedidos = obtenerTodosLosPedidos();
+                const todosLosUsuarios = obtenerTodosLosUsuarios();
+                const todosLosProductos = obtenerTodosLosProductos();
+                setUsuarios(todosLosUsuarios);
+                setProductos(todosLosProductos);
+                setPedidos(todosLosPedidos);
+            } catch (localErr) {
+                console.error('Error fatal en fallback local', localErr);
+            }
         } finally {
             setCargando(false);
         }
     };
 
     // --- Acciones de Productos ---
-    const manejarGuardarProducto = (e) => {
+    const manejarGuardarProducto = async (e) => {
         e.preventDefault();
         setErrorProducto('');
         const datosFormulario = new FormData(e.target);
@@ -89,14 +166,24 @@ const VistaAdmin = () => {
 
         try {
             if (editandoProducto) {
-                actualizarProducto(editandoProducto.id, {
-                    id,
-                    nombre: nombre,
-                    precio: precio,
-                    categoria: categoria
-                });
+                try {
+                    await apiUpdateProduct(editandoProducto.id, { nombre, precio, categoria });
+                } catch (apiErr) {
+                    console.warn('API update failed, using local', apiErr);
+                    actualizarProducto(editandoProducto.id, {
+                        id,
+                        nombre: nombre,
+                        precio: precio,
+                        categoria: categoria
+                    });
+                }
             } else {
-                agregarProducto(id, nombre, precio, stock, categoria);
+                try {
+                    await apiCreateProduct({ id, nombre, precio, stock, categoria });
+                } catch (apiErr) {
+                    console.warn('API create failed, using local', apiErr);
+                    agregarProducto(id, nombre, precio, stock, categoria);
+                }
             }
             setMostrarModalProducto(false);
             setEditandoProducto(null);
@@ -112,9 +199,14 @@ const VistaAdmin = () => {
             titulo: 'Eliminar Producto',
             mensaje: `¿Eliminar el producto ${prod ? `"${prod.nombre}"` : id}? Esta acción no se puede deshacer.`,
             severidad: 'warning',
-            alConfirmar: () => {
+            alConfirmar: async () => {
                 try {
-                    eliminarProducto(id);
+                    try {
+                        await apiDeleteProduct(id);
+                    } catch (apiErr) {
+                        console.warn('API delete failed, using local', apiErr);
+                        eliminarProducto(id);
+                    }
                     cargarDatos();
                     mostrarNotificacion({ tipo: 'info', titulo: 'Producto eliminado', mensaje: 'Se eliminó correctamente.' });
                 } catch (err) {
@@ -125,7 +217,7 @@ const VistaAdmin = () => {
     };
 
     // --- Acciones de Usuario ---
-    const manejarGuardarUsuario = (e) => {
+    const manejarGuardarUsuario = async (e) => {
         e.preventDefault();
         setErrorUsuario('');
         const datosFormulario = new FormData(e.target);
@@ -141,14 +233,26 @@ const VistaAdmin = () => {
                 const rol = datosFormulario.get('rol');
                 const estado = datosFormulario.get('estado');
                 const telefono = datosFormulario.get('telefono');
-                adminCrearUsuario(admin.id, csrf, id, nombre, email, contrasena, rol, estado, telefono);
+                
+                try {
+                    await apiCreateUser({ id, nombre, email, contrasena, rol, estado, telefono });
+                } catch (apiErr) {
+                    console.warn('API create user failed, using local', apiErr);
+                    adminCrearUsuario(admin.id, csrf, id, nombre, email, contrasena, rol, estado, telefono);
+                }
             } else {
                 const nuevoId = datosFormulario.get('id');
                 const nombre = datosFormulario.get('nombre');
                 const email = datosFormulario.get('email');
                 const rol = datosFormulario.get('rol');
                 const campos = { id: nuevoId, nombre, email, rol };
-                adminActualizarUsuario(admin.id, csrf, editandoUsuario.id, campos);
+                
+                try {
+                    await apiUpdateUser(editandoUsuario.id, campos);
+                } catch (apiErr) {
+                    console.warn('API update user failed, using local', apiErr);
+                    adminActualizarUsuario(admin.id, csrf, editandoUsuario.id, campos);
+                }
             }
             setMostrarModalUsuario(false);
             setEditandoUsuario(null);
@@ -166,11 +270,18 @@ const VistaAdmin = () => {
             titulo: 'Cambiar Estado de Usuario',
             mensaje: `¿Cambiar estado de ${usuario.nombre} a "${nuevoEstadoEsp}"?`,
             severidad: 'warning',
-            alConfirmar: () => {
+            alConfirmar: async () => {
                 try {
                     const csrf = localStorage.getItem(CLAVES_BD.CSRF_TOKEN) || '';
                     const admin = obtenerUsuarioActual();
-                    adminActualizarUsuario(admin.id, csrf, usuario.id, { estado: nuevoEstadoEsp });
+                    
+                    try {
+                        await apiUpdateUser(usuario.id, { estado: nuevoEstadoEsp });
+                    } catch (apiErr) {
+                        console.warn('API user status update failed, using local', apiErr);
+                        adminActualizarUsuario(admin.id, csrf, usuario.id, { estado: nuevoEstadoEsp });
+                    }
+
                     cargarDatos();
                     mostrarNotificacion({ tipo: 'info', titulo: 'Estado actualizado', mensaje: 'El usuario fue actualizado.' });
                 } catch (err) {
@@ -185,11 +296,18 @@ const VistaAdmin = () => {
             titulo: 'Eliminar Usuario',
             mensaje: `¿Eliminar al usuario "${usuario.nombre}"? Esta acción no se puede deshacer.`,
             severidad: 'warning',
-            alConfirmar: () => {
+            alConfirmar: async () => {
                 try {
                     const csrf = localStorage.getItem(CLAVES_BD.CSRF_TOKEN) || '';
                     const admin = obtenerUsuarioActual();
-                    adminEliminarUsuario(admin.id, csrf, usuario.id);
+                    
+                    try {
+                        await apiDeleteUser(usuario.id);
+                    } catch (apiErr) {
+                        console.warn('API delete user failed, using local', apiErr);
+                        adminEliminarUsuario(admin.id, csrf, usuario.id);
+                    }
+
                     cargarDatos();
                     mostrarNotificacion({ tipo: 'info', titulo: 'Usuario eliminado', mensaje: 'Se eliminó correctamente.' });
                 } catch (err) {
@@ -215,7 +333,7 @@ const VistaAdmin = () => {
         setMostrarModalAsignacion(true);
     };
     
-    const manejarAsignarRepartidor = (e) => {
+    const manejarAsignarRepartidor = async (e) => {
         e.preventDefault();
         setErrorAsignacion('');
         if (!idRepartidorSeleccionado) {
@@ -223,7 +341,13 @@ const VistaAdmin = () => {
             return;
         }
         try {
-            asignarRepartidor(pedidoSeleccionado.id, idRepartidorSeleccionado);
+            try {
+                await apiAssignOrder(pedidoSeleccionado.id, idRepartidorSeleccionado);
+            } catch (apiErr) {
+                console.warn('API assign order failed, using local', apiErr);
+                asignarRepartidor(pedidoSeleccionado.id, idRepartidorSeleccionado);
+            }
+
             setMostrarModalAsignacion(false);
             setPedidoSeleccionado(null);
             setIdRepartidorSeleccionado('');
@@ -455,6 +579,7 @@ const VistaAdmin = () => {
                                         return (
                                             <React.Suspense fallback={<div className="alert alert-info">Cargando usuarios...</div>}>
                                                 <UsersTable
+                                                    data={usuarios}
                                                     onEditarUsuario={(u) => { setEditandoUsuario(u); setCreandoUsuario(false); setMostrarModalUsuario(true); }}
                                                     onAlternarEstadoUsuario={(u) => alternarEstadoUsuario(u)}
                                                     onEliminarUsuario={(u) => manejarEliminarUsuario(u)}
@@ -582,7 +707,7 @@ const VistaAdmin = () => {
                                 const OrdersTable = React.lazy(() => import('../components/OrdersTable'));
                                 return (
                                     <React.Suspense fallback={<div className="alert alert-info">Cargando pedidos...</div>}>
-                                        <OrdersTable onAsignar={(p) => abrirModalAsignacionRepartidor(p)} />
+                                        <OrdersTable data={pedidos} onAsignar={(p) => abrirModalAsignacionRepartidor(p)} />
                                     </React.Suspense>
                                 );
                             })()}

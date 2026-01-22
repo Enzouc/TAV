@@ -17,6 +17,42 @@ const sesionActiva = () => {
     return exp && Date.now() < exp;
 };
 
+const b64u = (str) => {
+    const b64 = typeof btoa !== 'undefined' ? btoa(str) : Buffer.from(str).toString('base64');
+    return b64.replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+};
+const toJsonB64u = (obj) => b64u(JSON.stringify(obj));
+const hmacSHA256 = async (secret, data) => {
+    if (typeof window !== 'undefined' && window.crypto && window.crypto.subtle) {
+        const enc = new TextEncoder();
+        const key = await window.crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+        const sig = await window.crypto.subtle.sign('HMAC', key, enc.encode(data));
+        const bytes = new Uint8Array(sig);
+        let bin = '';
+        bytes.forEach((b) => (bin += String.fromCharCode(b)));
+        return b64u(bin);
+    }
+    // Fallback simple para entornos sin crypto.subtle (no seguro, solo para dev)
+    console.warn('Crypto API no disponible, usando fallback inseguro');
+    return b64u(data + secret); 
+};
+const crearJWT = async (payload, secret) => {
+    const header = { alg: 'HS256', typ: 'JWT' };
+    const p1 = toJsonB64u(header);
+    const p2 = toJsonB64u(payload);
+    const firma = await hmacSHA256(secret, `${p1}.${p2}`);
+    return `${p1}.${p2}.${firma}`;
+};
+const decodePayload = (p2) => {
+    try {
+        const b64 = p2.replace(/-/g, '+').replace(/_/g, '/');
+        const json = typeof atob !== 'undefined' ? atob(b64) : Buffer.from(b64, 'base64').toString();
+        return JSON.parse(json);
+    } catch {
+        return null;
+    }
+};
+
 export const iniciarSesion = (email, contrasena) => {
     try {
         const intentos = JSON.parse(localStorage.getItem(CLAVES_BD.LOGIN_ATTEMPTS) || '{}');
@@ -36,9 +72,12 @@ export const iniciarSesion = (email, contrasena) => {
         intentos[email] = 0;
         localStorage.setItem(CLAVES_BD.LOGIN_ATTEMPTS, JSON.stringify(intentos));
 
-        const sessionToken = generarToken();
         const csrfToken = generarToken();
-        localStorage.setItem(CLAVES_BD.SESSION_TOKEN, sessionToken);
+        const payload = { sub: usuario.id, role: usuario.rol, exp: Date.now() + 30 * 60000 };
+        (async () => {
+            const jwt = await crearJWT(payload, csrfToken);
+            localStorage.setItem(CLAVES_BD.SESSION_TOKEN, jwt);
+        })();
         localStorage.setItem(CLAVES_BD.CSRF_TOKEN, csrfToken);
         configurarTiempoSesion(30);
         registrarActividad('login', { idUsuario: usuario.id, email });
@@ -97,7 +136,17 @@ export const verificarAutenticacion = (rolRequerido = null) => {
         limpiarUsuarioActual();
         return false;
     }
-    
+    const partes = token.split('.');
+    if (partes.length === 3) {
+        const payload = decodePayload(partes[1]);
+        if (!payload) return false;
+        if (payload.exp && Date.now() > payload.exp) return false;
+        if (payload.sub && payload.sub !== usuario.id) return false;
+        if (rolRequerido && usuario.rol !== rolRequerido && usuario.rol !== 'admin') {
+            return false;
+        }
+        return usuario;
+    }
     if (rolRequerido && usuario.rol !== rolRequerido && usuario.rol !== 'admin') {
         return false;
     }

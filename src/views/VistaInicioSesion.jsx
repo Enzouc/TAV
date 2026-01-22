@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { iniciarSesion } from '../utils/autenticacion';
+import { login } from '../services/usersService';
+import { guardarUsuarioActual } from '../utils/almacenamiento';
 
 const VistaInicioSesion = () => {
     const navegar = useNavigate();
@@ -9,24 +11,51 @@ const VistaInicioSesion = () => {
     const [error, setError] = useState('');
     const [cargando, setCargando] = useState(false);
 
-    const manejarEnvio = (e) => {
+    const manejarEnvio = async (e) => {
         e.preventDefault();
         setError('');
         setCargando(true);
-        const resultado = iniciarSesion(email, contrasena);
-        if (resultado.exito) {
-            setTimeout(() => {
-                if (resultado.usuario.rol === 'repartidor') {
-                    navegar('/repartidor');
-                } else if (resultado.usuario.rol === 'admin') {
-                    navegar('/admin');
+
+        const controller = new AbortController();
+        
+        try {
+            // Intento con servicio API
+            const respuesta = await login({ email, contrasena }, controller.signal);
+            // Asumimos que la respuesta trae { user: ... } o { usuario: ... } además del token ya manejado
+            const usuario = respuesta.user || respuesta.usuario;
+            if (usuario) {
+                guardarUsuarioActual(usuario);
+                setTimeout(() => {
+                    if (usuario.rol === 'repartidor') navegar('/repartidor');
+                    else if (usuario.rol === 'admin') navegar('/admin');
+                    else navegar('/');
+                }, 300);
+            } else {
+                // Si no hay usuario en respuesta, algo raro pasó, quizás solo token
+                // Podríamos intentar hacer getProfile() aquí si fuera necesario
+                navegar('/');
+            }
+        } catch (err) {
+            // Si es error de red o 404 (API no existe), usamos fallback local
+            // Si es 401 (Credenciales), mostramos error
+            if (!err.status || err.status === 404 || err.status >= 500) {
+                console.warn('API login falló o no disponible, usando local:', err);
+                const resultado = iniciarSesion(email, contrasena);
+                if (resultado.exito) {
+                    setTimeout(() => {
+                        if (resultado.usuario.rol === 'repartidor') navegar('/repartidor');
+                        else if (resultado.usuario.rol === 'admin') navegar('/admin');
+                        else navegar('/');
+                    }, 300);
                 } else {
-                    navegar('/');
+                    setError(resultado.mensaje);
                 }
-            }, 300);
-        } else {
-            setError(resultado.mensaje);
-            setCargando(false);
+            } else {
+                // Error de validación o credenciales desde API
+                setError(err.message || 'Error al iniciar sesión');
+            }
+        } finally {
+            if (!controller.signal.aborted) setCargando(false);
         }
     };
 

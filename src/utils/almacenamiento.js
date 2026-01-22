@@ -23,7 +23,20 @@ export const obtenerProductos = () => safeParse(localStorage.getItem(CLAVES_BD.P
 export const obtenerUsuarios = () => safeParse(localStorage.getItem(CLAVES_BD.USUARIOS), []);
 export const obtenerPedidos = () => safeParse(localStorage.getItem(CLAVES_BD.PEDIDOS), []);
 export const obtenerCarrito = () => safeParse(localStorage.getItem(CLAVES_BD.CARRITO), []);
-export const obtenerUsuarioActual = () => safeParse(localStorage.getItem(CLAVES_BD.USUARIO_ACTUAL), null);
+export const obtenerUsuarioActual = () => {
+    const usuario = safeParse(localStorage.getItem(CLAVES_BD.USUARIO_ACTUAL), null);
+    
+    // Validar que sea un objeto válido y no una cadena (como HTML devuelto por error)
+    if (!usuario || typeof usuario !== 'object' || Array.isArray(usuario)) {
+        return null;
+    }
+
+    // Asegurar que el usuario tenga un rol definido para evitar redirecciones erróneas
+    if (usuario && !usuario.rol) {
+        usuario.rol = 'usuario';
+    }
+    return usuario;
+};
 
 export const guardarProductos = (productos) => {
     safeSetItem(CLAVES_BD.PRODUCTOS, productos);
@@ -43,8 +56,12 @@ export const guardarCarrito = (carrito) => {
 };
 
 export const guardarUsuarioActual = (usuario) => {
-    safeSetItem(CLAVES_BD.USUARIO_ACTUAL, usuario);
-    window.dispatchEvent(new Event('auth-cambiado'));
+    if (usuario && typeof usuario === 'object' && !Array.isArray(usuario)) {
+        safeSetItem(CLAVES_BD.USUARIO_ACTUAL, usuario);
+        window.dispatchEvent(new Event('auth-cambiado'));
+    } else {
+        console.warn('Intento de guardar usuario inválido:', usuario);
+    }
 };
 
 export const limpiarUsuarioActual = () => {

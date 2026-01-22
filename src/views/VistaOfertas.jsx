@@ -1,10 +1,40 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { aplicarFormatoMoneda } from '../utils/datos';
 import { obtenerProductos, obtenerCarrito, guardarCarrito } from '../utils/almacenamiento';
 import { usarUI } from '../components/ContextoUI';
+import ProductModal from '../components/ProductModal';
+import { getProducts } from '../services/productsService';
 
 const VistaOfertas = () => {
     const { mostrarNotificacion } = usarUI();
+    const [modalAbierto, setModalAbierto] = useState(false);
+    const [seleccion, setSeleccion] = useState(null);
+    const [inventario, setInventario] = useState([]);
+    
+    useEffect(() => {
+        const controller = new AbortController();
+        const cargarInventario = async () => {
+            try {
+                const res = await getProducts({}, controller.signal);
+                
+                // Validación robusta de la respuesta
+                if (res && typeof res === 'object') {
+                    const prods = Array.isArray(res) ? res : (Array.isArray(res.data) ? res.data : (res.data?.data || []));
+                    setInventario(prods);
+                } else {
+                    throw new Error('Formato de respuesta inválido');
+                }
+            } catch (e) {
+                if (e.name !== 'CanceledError' && e.code !== 'ERR_CANCELED') {
+                    console.warn('API error en ofertas, usando local fallback:', e);
+                    setInventario(obtenerProductos());
+                }
+            }
+        };
+        cargarInventario();
+        return () => controller.abort();
+    }, []);
+
     const ofertas = [
         {
             id: 'oferta-15',
@@ -38,8 +68,6 @@ const VistaOfertas = () => {
         }
     ];
 
-    const inventario = useMemo(() => obtenerProductos(), []);
-
     const calcularDescuento = (oferta) => {
         const pct = Math.round((1 - oferta.precioFinal / oferta.precioOriginal) * 100);
         const ahorro = oferta.precioOriginal - oferta.precioFinal;
@@ -51,28 +79,48 @@ const VistaOfertas = () => {
         return p ? p.stock : 0;
     };
 
-    const manejarAgregar = (oferta) => {
+    const abrirSelector = (oferta) => {
         const stock = obtenerStock(oferta.productoId);
         if (stock <= 0) {
             mostrarNotificacion({ tipo: 'warning', titulo: 'Sin stock', mensaje: 'Este producto está agotado.' });
             return;
         }
+        setSeleccion(oferta);
+        setModalAbierto(true);
+    };
+
+    const manejarAgregar = (oferta, cant = 1) => {
+        const stock = obtenerStock(oferta.productoId);
+        if (stock <= 0) {
+            mostrarNotificacion({ tipo: 'warning', titulo: 'Sin stock', mensaje: 'Este producto está agotado.' });
+            return;
+        }
+        if (cant < 1) {
+            mostrarNotificacion({ tipo: 'warning', titulo: 'Cantidad inválida', mensaje: 'Debe ser al menos 1.' });
+            return;
+        }
+        if (cant > stock) {
+            mostrarNotificacion({ tipo: 'warning', titulo: 'Sin stock suficiente', mensaje: `Máximo disponible: ${stock}.` });
+            return;
+        }
         const carrito = obtenerCarrito();
         const idx = carrito.findIndex(i => i.id === oferta.productoId);
         if (idx > -1) {
-            carrito[idx].cantidad += 1;
+            carrito[idx].cantidad += cant;
             carrito[idx].precio = oferta.precioFinal;
         } else {
             const producto = inventario.find(x => x.id === oferta.productoId);
             carrito.push({
                 id: oferta.productoId,
                 nombre: producto ? producto.nombre : oferta.titulo,
-                cantidad: 1,
+                cantidad: cant,
                 precio: oferta.precioFinal
             });
         }
         guardarCarrito(carrito);
         mostrarNotificacion({ tipo: 'info', titulo: 'Añadido al carrito', mensaje: `${oferta.titulo} agregado correctamente.` });
+        setModalAbierto(false);
+        setSeleccion(null);
     };
 
     return (
@@ -85,7 +133,15 @@ const VistaOfertas = () => {
                 <div className="row g-4">
                     {ofertas.map(oferta => (
                         <div key={oferta.id} className="col-sm-6 col-lg-4">
-                            <div className="card h-100 oferta-card">
+                            <div
+                                className="card h-100 oferta-card"
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => abrirSelector(oferta)}
+                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') abrirSelector(oferta); }}
+                                aria-label={`Seleccionar ${oferta.titulo}`}
+                                style={{ cursor: 'pointer' }}
+                            >
                                 <div className="position-relative">
                                     <span className="badge bg-danger position-absolute top-0 start-0 m-2">{oferta.badge}</span>
                                     <img
@@ -122,7 +178,7 @@ const VistaOfertas = () => {
                                             </span>
                                             <button
                                                 className="btn btn-primary btn-sm"
-                                                onClick={() => manejarAgregar(oferta)}
+                                                onClick={(e) => { e.stopPropagation(); abrirSelector(oferta); }}
                                                 disabled={obtenerStock(oferta.productoId) <= 0}
                                             >
                                                 Añadir al carrito
@@ -136,6 +192,18 @@ const VistaOfertas = () => {
                 </div>
             </div>
             </div>
+            <ProductModal 
+                show={modalAbierto}
+                onClose={() => { setModalAbierto(false); setSeleccion(null); }}
+                product={seleccion ? {
+                    ...seleccion,
+                    nombre: seleccion.titulo,
+                    precio: seleccion.precioFinal,
+                    stock: obtenerStock(seleccion.productoId),
+                    categoria: 'Oferta'
+                } : null}
+                onAddToCart={(p, qty) => manejarAgregar(seleccion, qty)}
+            />
         </main>
     );
 };

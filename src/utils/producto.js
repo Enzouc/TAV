@@ -79,7 +79,27 @@ export const obtenerProductoPorId = (id) => {
     return producto;
 };
 
-// 5. Eliminar Producto
+// 5. Obtener Imagen de Producto (Helper)
+export const obtenerImagenProducto = (nombre) => {
+    if (!nombre) return 'productos_gas/producto-gas-15-kg.png';
+    const nm = String(nombre).toLowerCase();
+    
+    if (nm.includes('catalítico') || nm.includes('catalitico')) {
+        return 'productos_gas/producto-gas-catalitico-11-kg.jpg';
+    }
+    
+    const match = nm.match(/(\d+)\s*kg/);
+    const peso = match ? parseInt(match[1], 10) : null;
+    
+    if (peso === 5) return 'productos_gas/producto-gas-5-kg.png';
+    if (peso === 11) return 'productos_gas/producto-gas-11-kg.png';
+    if (peso === 15) return 'productos_gas/producto-gas-15-kg.png';
+    if (peso === 45) return 'productos_gas/producto-gas-45-kg.png';
+    
+    return 'productos_gas/producto-gas-15-kg.png';
+};
+
+// 6. Eliminar Producto
 export const eliminarProducto = (id) => {
     const productos = obtenerProductos();
     const indice = productos.findIndex(p => p.id === id);

@@ -4,6 +4,7 @@ import { obtenerCarrito, guardarCarrito, obtenerUsuarioActual } from '../utils/a
 import { crearPedido } from '../utils/pedido';
 import { crearDetallePedido } from '../utils/detallePedido';
 import { usarUI } from '../components/ContextoUI';
+import Modal from '../components/Modal.jsx';
 
 const VistaCarrito = () => {
     const navegar = useNavigate();
@@ -12,6 +13,8 @@ const VistaCarrito = () => {
     const [cargando, setCargando] = useState(true);
     const [error, setError] = useState('');
     const { mostrarNotificacion } = usarUI();
+    const [modalPagoAbierto, setModalPagoAbierto] = useState(false);
+    const [metodoPago, setMetodoPago] = useState('');
 
     useEffect(() => {
         try {
@@ -54,25 +57,19 @@ const VistaCarrito = () => {
 
         if (carrito.length === 0) return;
 
+        setMetodoPago('');
+        setModalPagoAbierto(true);
+    };
+
+    const confirmarPago = () => {
+        if (!metodoPago) return;
         try {
-            // Preparar detalles usando lógica de detallePedido
-            const elementos = carrito.map(item => 
+            const elementos = carrito.map(item =>
                 crearDetallePedido(item.id, item.nombre, item.cantidad, item.precio)
             );
-
-            // Calcular total
             const total = elementos.reduce((suma, item) => suma + item.subtotal, 0);
-
-            // Determinar repartidor (lógica simplificada conservada)
-            let idRepartidor = null;
-            if (usuario.direccion && usuario.direccion.comuna === 'Concepción') {
-                idRepartidor = '#R050'; 
-            }
-
             const direccionStr = usuario.direccion ? `${usuario.direccion.calle} ${usuario.direccion.numero}, ${usuario.direccion.comuna}` : 'Dirección no registrada';
             const idPedido = '#ORD-' + Date.now().toString().slice(-6);
-
-            // Crear pedido usando lógica de pedido
             crearPedido(
                 idPedido,
                 usuario.id,
@@ -81,17 +78,16 @@ const VistaCarrito = () => {
                 direccionStr,
                 total,
                 'Pendiente',
-                idRepartidor,
-                null, // la fecha por defecto es ahora
-                'Efectivo',
+                null,
+                null,
+                metodoPago,
                 elementos
             );
-
-            guardarCarrito([]); // Limpiar carrito
+            guardarCarrito([]);
+            setModalPagoAbierto(false);
             mostrarNotificacion({ tipo: 'info', titulo: 'Pedido realizado', mensaje: 'Tu pedido fue creado con éxito.' });
             navegar('/pedidos');
         } catch (error) {
-            console.error('Error al crear el pedido:', error);
             mostrarNotificacion({ tipo: 'error', titulo: 'Error', mensaje: 'Hubo un error al procesar tu pedido. Inténtalo de nuevo.' });
         }
     };
@@ -174,6 +170,64 @@ const VistaCarrito = () => {
                     </div>
                 </div>
             )}
+            <Modal
+                abierto={modalPagoAbierto}
+                titulo="Selecciona método de pago"
+                mensaje=""
+                severidad="info"
+                etiquetaConfirmar="Continuar"
+                etiquetaCancelar="Cancelar"
+                alCancelar={() => setModalPagoAbierto(false)}
+                alConfirmar={confirmarPago}
+            >
+                <div className="list-group">
+                    <label className={`list-group-item d-flex align-items-center ${metodoPago === 'Efectivo' ? 'active' : ''}`} style={{ cursor: 'pointer' }}>
+                        <input
+                            type="radio"
+                            name="metodo-pago"
+                            className="form-check-input me-3"
+                            checked={metodoPago === 'Efectivo'}
+                            onChange={() => setMetodoPago('Efectivo')}
+                            aria-label="Efectivo"
+                        />
+                        <span className="me-2">💵</span>
+                        <div>
+                            <div className="fw-bold">Efectivo</div>
+                            <div className="text-muted small">Pago al recibir el pedido.</div>
+                        </div>
+                    </label>
+                    <label className={`list-group-item d-flex align-items-center ${metodoPago === 'Tarjeta' ? 'active' : ''}`} style={{ cursor: 'pointer' }}>
+                        <input
+                            type="radio"
+                            name="metodo-pago"
+                            className="form-check-input me-3"
+                            checked={metodoPago === 'Tarjeta'}
+                            onChange={() => setMetodoPago('Tarjeta')}
+                            aria-label="Tarjeta"
+                        />
+                        <span className="me-2">💳</span>
+                        <div>
+                            <div className="fw-bold">Tarjeta</div>
+                            <div className="text-muted small">Crédito o débito vía lector móvil.</div>
+                        </div>
+                    </label>
+                    <label className={`list-group-item d-flex align-items-center ${metodoPago === 'Transferencia' ? 'active' : ''}`} style={{ cursor: 'pointer' }}>
+                        <input
+                            type="radio"
+                            name="metodo-pago"
+                            className="form-check-input me-3"
+                            checked={metodoPago === 'Transferencia'}
+                            onChange={() => setMetodoPago('Transferencia')}
+                            aria-label="Transferencia"
+                        />
+                        <span className="me-2">🔁</span>
+                        <div>
+                            <div className="fw-bold">Transferencia</div>
+                            <div className="text-muted small">Transferencia bancaria previa a la entrega.</div>
+                        </div>
+                    </label>
+                </div>
+            </Modal>
         </div>
     );
 };

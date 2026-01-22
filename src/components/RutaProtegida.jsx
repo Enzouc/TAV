@@ -10,6 +10,7 @@ const RutaProtegida = ({ rolesPermitidos }) => {
     }
 
     if (rolesPermitidos && !rolesPermitidos.includes(usuario.rol)) {
+        console.warn(`Acceso denegado a ruta protegida. Rol usuario: ${usuario.rol}, Permitidos: ${rolesPermitidos.join(', ')}`);
         // Redirigir basado en rol si no está autorizado para la ruta específica
         if (usuario.rol === 'repartidor') return <Navigate to="/repartidor" replace />;
         if (usuario.rol === 'admin') return <Navigate to="/admin" replace />;
