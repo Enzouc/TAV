@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import RutaProtegida from './components/RutaProtegida';
+import RutaCliente from './components/RutaCliente';
 import { ProveedorUI } from './components/ContextoUI';
 
 const VistaInicio = lazy(() => import('./views/VistaInicio'));
@@ -23,25 +24,30 @@ const App = () => {
         <ProveedorUI>
             <Suspense fallback={<div className="container py-5 text-center">Cargando...</div>}>
                 <Routes>
-                    <Route element={<LayoutPublico />}>
-                        <Route path="/" element={<VistaInicio />} />
-                        <Route path="/catalogo" element={<VistaCatalogo />} />
-                        <Route path="/carrito" element={<VistaCarrito />} />
-                        <Route path="/ofertas" element={<VistaOfertas />} />
-                        <Route path="/ayuda" element={<VistaAyuda />} />
-                        <Route path="/zonas" element={<VistaZonas />} />
+                    {/* Rutas Públicas / Cliente (Restringidas para Admin/Repartidor) */}
+                    <Route element={<RutaCliente />}>
+                        <Route element={<LayoutPublico />}>
+                            <Route path="/" element={<VistaInicio />} />
+                            <Route path="/catalogo" element={<VistaCatalogo />} />
+                            <Route path="/carrito" element={<VistaCarrito />} />
+                            <Route path="/ofertas" element={<VistaOfertas />} />
+                            <Route path="/ayuda" element={<VistaAyuda />} />
+                            <Route path="/zonas" element={<VistaZonas />} />
+                        </Route>
+                        <Route path="/registro" element={<VistaRegistro />} />
                     </Route>
 
                     <Route path="/iniciar-sesion" element={<VistaInicioSesion />} />
-                    <Route path="/registro" element={<VistaRegistro />} />
 
-                    <Route element={<RutaProtegida rolesPermitidos={['usuario', 'admin', 'repartidor']} />}>
+                    {/* Rutas Protegidas de Cliente (Usuario Autenticado) */}
+                    <Route element={<RutaProtegida rolesPermitidos={['usuario']} />}>
                         <Route element={<LayoutPublico />}>
                             <Route path="/pedidos" element={<VistaPedidos />} />
                             <Route path="/perfil" element={<VistaPerfil />} />
                         </Route>
                     </Route>
 
+                    {/* Dashboard Repartidor */}
                     <Route element={<RutaProtegida rolesPermitidos={['repartidor', 'admin']} />}>
                         <Route path="/repartidor" element={<VistaRepartidor />} />
                     </Route>

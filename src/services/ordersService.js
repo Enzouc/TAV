@@ -1,7 +1,16 @@
 import axiosClient from './axiosClient';
 import { orderSchema, validate } from '../utils/validationSchemas';
+import { obtenerUsuarioActual } from '../utils/almacenamiento';
+
+const validarAccesoUsuario = () => {
+    const usuario = obtenerUsuarioActual();
+    if (usuario && (usuario.rol === 'admin' || usuario.rol === 'repartidor')) {
+        throw new Error('Acceso no autorizado: Los administradores y repartidores no pueden realizar acciones de cliente.');
+    }
+};
 
 export const createOrder = (pedido, signal) => {
+  validarAccesoUsuario();
   const { success, error, data } = validate(orderSchema, pedido);
   if (!success) {
     const e = new Error(error);
