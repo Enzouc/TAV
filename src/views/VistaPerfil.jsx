@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { obtenerUsuarioActual, obtenerUsuarios, guardarUsuarios, guardarUsuarioActual, limpiarUsuarioActual } from '../utils/almacenamiento';
 import { getProfile, updateProfile, logout as apiLogout } from '../services/usersService';
+import { getOrders } from '../services/ordersService';
 import { validarTelefono } from '../utils/usuario';
 import { CLAVES_BD } from '../utils/datos';
 import Modal from '../components/Modal.jsx';
@@ -9,6 +10,8 @@ import { useNavigate } from 'react-router-dom';
 
 const VistaPerfil = () => {
   const [usuario, setUsuario] = useState(null);
+  const [pedidos, setPedidos] = useState([]);
+  const [cargandoPedidos, setCargandoPedidos] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
@@ -50,6 +53,7 @@ const VistaPerfil = () => {
                // Sincronizar local
                guardarUsuarioActual(u);
                setCargando(false);
+               cargarPedidos(u.id, controller.signal);
                return;
            }
         } catch (apiErr) {
@@ -252,6 +256,58 @@ const VistaPerfil = () => {
             </div>
           </div>
         </form>
+
+        <div className="card shadow-sm border-0 mt-4">
+            <div className="card-header bg-white border-bottom-0 pt-4 px-4">
+                <h4 className="mb-0">Mis Pedidos</h4>
+            </div>
+            <div className="card-body p-4">
+                {cargandoPedidos ? (
+                    <div className="text-center py-3">Cargando pedidos...</div>
+                ) : pedidos.length === 0 ? (
+                    <div className="text-center text-muted py-3">No has realizado pedidos aún.</div>
+                ) : (
+                    <div className="table-responsive">
+                        <table className="table table-hover align-middle">
+                            <thead className="table-light">
+                                <tr>
+                                    <th>ID Pedido</th>
+                                    <th>Fecha</th>
+                                    <th>Estado</th>
+                                    <th>Total</th>
+                                    <th>Items</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {pedidos.map(pedido => (
+                                    <tr key={pedido.id}>
+                                        <td><span className="font-monospace small">{pedido.id}</span></td>
+                                        <td>{new Date(pedido.fecha_pedido || pedido.createdAt).toLocaleDateString()}</td>
+                                        <td>
+                                            <span className={`badge ${
+                                                pedido.estado === 'entregado' ? 'bg-success' :
+                                                pedido.estado === 'cancelado' ? 'bg-danger' :
+                                                pedido.estado === 'en_camino' ? 'bg-primary' :
+                                                'bg-warning text-dark'
+                                            }`}>
+                                                {pedido.estado?.toUpperCase()}
+                                            </span>
+                                        </td>
+                                        <td>${parseInt(pedido.total).toLocaleString('es-CL')}</td>
+                                        <td>
+                                            <small className="text-muted">
+                                                {pedido.items?.map(i => `${i.cantidad}x ${i.nombre_producto}`).join(', ') || 'Ver detalles'}
+                                            </small>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+        </div>
+
         <div className="card border-0 shadow-sm mt-4">
           <div className="card-body d-flex align-items-center">
             <div className="me-auto">

@@ -44,16 +44,19 @@ const App = () => {
                         <Route element={<LayoutPublico />}>
                             <Route path="/pedidos" element={<VistaPedidos />} />
                             <Route path="/perfil" element={<VistaPerfil />} />
+                            <Route path="/client/dashboard" element={<Navigate to="/perfil" replace />} />
                         </Route>
                     </Route>
 
                     {/* Dashboard Repartidor */}
                     <Route element={<RutaProtegida rolesPermitidos={['repartidor', 'admin']} />}>
-                        <Route path="/repartidor" element={<VistaRepartidor />} />
+                        <Route path="/delivery/dashboard" element={<VistaRepartidor />} />
+                        <Route path="/repartidor" element={<Navigate to="/delivery/dashboard" replace />} />
                     </Route>
 
                     <Route element={<RutaProtegida rolesPermitidos={['admin']} />}>
-                        <Route path="/admin" element={<VistaAdmin />} />
+                        <Route path="/admin/dashboard" element={<VistaAdmin />} />
+                        <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
                     </Route>
 
                     <Route path="*" element={<Navigate to="/" replace />} />

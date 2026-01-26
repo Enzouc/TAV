@@ -31,9 +31,9 @@ const RutaProtegida = ({ rolesPermitidos }) => {
         }
 
         // Redirigir basado en rol si no está autorizado para la ruta específica
-        if (usuario.rol === 'repartidor') return <Navigate to="/repartidor" replace />;
-        if (usuario.rol === 'admin') return <Navigate to="/admin" replace />;
-        return <Navigate to="/" replace />;
+        if (usuario.rol === 'repartidor') return <Navigate to="/delivery/dashboard" replace />;
+        if (usuario.rol === 'admin') return <Navigate to="/admin/dashboard" replace />;
+        return <Navigate to="/client/dashboard" replace />;
     }
 
     return <Outlet />;

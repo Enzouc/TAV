@@ -38,7 +38,7 @@ export const updateOrderStatus = (id, estado, signal) => {
     e.status = 400;
     throw e;
   }
-  return axiosClient.put(`/orders/${id}/status`, { estado }, { signal });
+  return axiosClient.put(`/orders/${encodeURIComponent(id)}/status`, { estado }, { signal });
 };
 
 export const assignOrder = (id, idRepartidor, signal) => {
@@ -47,5 +47,14 @@ export const assignOrder = (id, idRepartidor, signal) => {
     e.status = 400;
     throw e;
   }
-  return axiosClient.put(`/orders/${id}/assign`, { idRepartidor }, { signal });
+  return axiosClient.put(`/orders/${encodeURIComponent(id)}/assign`, { idRepartidor }, { signal });
+};
+
+export const cancelOrder = (id, signal) => {
+  if (!id) {
+    const e = new Error('ID de pedido requerido');
+    e.status = 400;
+    throw e;
+  }
+  return axiosClient.delete(`/orders/${encodeURIComponent(id)}/cancel`, { signal });
 };

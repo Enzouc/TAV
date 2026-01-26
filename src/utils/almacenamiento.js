@@ -1,5 +1,7 @@
 import { CLAVES_BD, construirPrefijo, PREFIXES } from './datos';
 
+export { CLAVES_BD };
+
 const safeParse = (v, fallback) => {
     try { return JSON.parse(v || ''); } catch { return fallback; }
 };

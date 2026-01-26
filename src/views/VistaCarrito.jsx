@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { obtenerCarrito, guardarCarrito, obtenerUsuarioActual } from '../utils/almacenamiento';
-import { crearPedido } from '../utils/pedido';
+import { crearPedido as crearPedidoLocal } from '../utils/pedido'; // Renamed for fallback
+import { createOrder } from '../services/ordersService'; // Import service
 import { crearDetallePedido } from '../utils/detallePedido';
 import { usarUI } from '../components/ContextoUI';
 import Modal from '../components/Modal.jsx';
@@ -61,7 +62,7 @@ const VistaCarrito = () => {
         setModalPagoAbierto(true);
     };
 
-    const confirmarPago = () => {
+    const confirmarPago = async () => {
         if (!metodoPago) return;
         try {
             const elementos = carrito.map(item =>
@@ -69,25 +70,64 @@ const VistaCarrito = () => {
             );
             const total = elementos.reduce((suma, item) => suma + item.subtotal, 0);
             const direccionStr = usuario.direccion ? `${usuario.direccion.calle} ${usuario.direccion.numero}, ${usuario.direccion.comuna}` : 'Dirección no registrada';
-            const idPedido = '#ORD-' + Date.now().toString().slice(-6);
-            crearPedido(
-                idPedido,
-                usuario.id,
-                usuario.nombre,
-                usuario.telefono || '',
-                direccionStr,
-                total,
-                'Pendiente',
-                null,
-                null,
-                metodoPago,
-                elementos
-            );
+            
+            // Prepare data for API
+            const orderData = {
+                id_usuario: usuario.id,
+                nombre_usuario: usuario.nombre,
+                direccion_envio: direccionStr,
+                metodo_pago: metodoPago,
+                total: total,
+                items: carrito.map(item => ({
+                    id_producto: item.id,
+                    cantidad: item.cantidad,
+                    precio_unitario: item.precio,
+                    nombre_producto: item.nombre
+                }))
+            };
+
+            try {
+                // Try API first
+                await createOrder(orderData);
+                mostrarNotificacion({ tipo: 'info', titulo: 'Pedido realizado', mensaje: 'Tu pedido fue creado con éxito.' });
+            } catch (apiError) {
+                console.warn('API createOrder failed:', apiError);
+
+                // Check for Client Errors (400 Bad Request, 404 Not Found)
+                // These indicate invalid data (e.g., insufficient stock), so we should NOT fallback to local.
+                const status = apiError.response?.status || apiError.status;
+                if (status === 400 || status === 404) {
+                    const mensajeError = apiError.response?.data?.message || apiError.message || 'Error en los datos del pedido.';
+                    mostrarNotificacion({ tipo: 'error', titulo: 'Error al procesar', mensaje: mensajeError });
+                    // Close modal but keep cart so user can fix it (e.g. reduce quantity)
+                    setModalPagoAbierto(false);
+                    return; 
+                }
+
+                console.warn('Falling back to local storage due to network/server error.');
+                // Fallback to local storage only for Network/Server errors
+                const idPedido = '#ORD-' + Date.now().toString().slice(-6);
+                crearPedidoLocal(
+                    idPedido,
+                    usuario.id,
+                    usuario.nombre,
+                    usuario.telefono || '',
+                    direccionStr,
+                    total,
+                    'Pendiente',
+                    null,
+                    null,
+                    metodoPago,
+                    elementos
+                );
+                mostrarNotificacion({ tipo: 'warning', titulo: 'Modo Offline', mensaje: 'Tu pedido se guardó localmente debido a problemas de conexión.' });
+            }
+
             guardarCarrito([]);
             setModalPagoAbierto(false);
-            mostrarNotificacion({ tipo: 'info', titulo: 'Pedido realizado', mensaje: 'Tu pedido fue creado con éxito.' });
             navegar('/pedidos');
         } catch (error) {
+            console.error(error);
             mostrarNotificacion({ tipo: 'error', titulo: 'Error', mensaje: 'Hubo un error al procesar tu pedido. Inténtalo de nuevo.' });
         }
     };

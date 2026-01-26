@@ -21,19 +21,22 @@ const VistaInicioSesion = () => {
         try {
             // Intento con servicio API
             const respuesta = await login({ email, contrasena }, controller.signal);
-            // Asumimos que la respuesta trae { user: ... } o { usuario: ... } además del token ya manejado
-            const usuario = respuesta.user || respuesta.usuario;
-            if (usuario) {
+            // La respuesta del backend ya contiene los datos del usuario en la raíz
+            const usuario = respuesta;
+            
+            if (usuario && usuario.token) {
+                // Aseguramos que el usuario se guarde correctamente
                 guardarUsuarioActual(usuario);
+                
+                // Pequeño delay para asegurar que el almacenamiento se complete
                 setTimeout(() => {
-                    if (usuario.rol === 'repartidor') navegar('/repartidor');
-                    else if (usuario.rol === 'admin') navegar('/admin');
-                    else navegar('/');
-                }, 300);
+                    if (usuario.rol === 'repartidor') navegar('/delivery/dashboard');
+                    else if (usuario.rol === 'admin') navegar('/admin/dashboard');
+                    else navegar('/client/dashboard');
+                }, 100);
             } else {
-                // Si no hay usuario en respuesta, algo raro pasó, quizás solo token
-                // Podríamos intentar hacer getProfile() aquí si fuera necesario
-                navegar('/');
+                // Si no hay usuario/token en respuesta, algo raro pasó
+                setError('Error al recibir datos de sesión');
             }
         } catch (err) {
             // Si es error de red o 404 (API no existe), usamos fallback local
@@ -43,9 +46,9 @@ const VistaInicioSesion = () => {
                 const resultado = iniciarSesion(email, contrasena);
                 if (resultado.exito) {
                     setTimeout(() => {
-                        if (resultado.usuario.rol === 'repartidor') navegar('/repartidor');
-                        else if (resultado.usuario.rol === 'admin') navegar('/admin');
-                        else navegar('/');
+                        if (resultado.usuario.rol === 'repartidor') navegar('/delivery/dashboard');
+                        else if (resultado.usuario.rol === 'admin') navegar('/admin/dashboard');
+                        else navegar('/client/dashboard');
                     }, 300);
                 } else {
                     setError(resultado.mensaje);

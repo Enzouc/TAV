@@ -8,7 +8,7 @@ import { usarUI } from '../components/ContextoUI';
 import { obtenerUsuarioActual } from '../utils/almacenamiento';
 import { getProducts, createProduct as apiCreateProduct, updateProduct as apiUpdateProduct, deleteProduct as apiDeleteProduct } from '../services/productsService';
 import { getUsers, createUser as apiCreateUser, updateUser as apiUpdateUser, deleteUser as apiDeleteUser } from '../services/usersService';
-import { getOrders, assignOrder as apiAssignOrder } from '../services/ordersService';
+import { getOrders, assignOrder as apiAssignOrder, cancelOrder as apiCancelOrder } from '../services/ordersService';
 
 const VistaAdmin = () => {
     const [seccionActiva, setSeccionActiva] = useState('dashboard');
@@ -31,6 +31,11 @@ const VistaAdmin = () => {
     const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null);
     const [idRepartidorSeleccionado, setIdRepartidorSeleccionado] = useState('');
     const [errorAsignacion, setErrorAsignacion] = useState('');
+    
+    // Estados para Cancelación
+    const [mostrarModalCancelacion, setMostrarModalCancelacion] = useState(false);
+    const [pedidoCancelacion, setPedidoCancelacion] = useState(null);
+    const [cargandoCancelacion, setCargandoCancelacion] = useState(false);
     const [filtroTipo, setFiltroTipo] = useState('todos');
     const [filtroActor, setFiltroActor] = useState('');
     const [filtroDesde, setFiltroDesde] = useState('');
@@ -354,6 +359,28 @@ const VistaAdmin = () => {
             cargarDatos();
         } catch (err) {
             setErrorAsignacion(err.message);
+        }
+    };
+
+    // Funciones Cancelación
+    const abrirModalCancelacion = (pedido) => {
+        setPedidoCancelacion(pedido);
+        setMostrarModalCancelacion(true);
+    };
+
+    const manejarConfirmarCancelacion = async () => {
+        if (!pedidoCancelacion) return;
+        setCargandoCancelacion(true);
+        try {
+             await apiCancelOrder(pedidoCancelacion.id);
+             mostrarNotificacion({ tipo: 'success', titulo: 'Éxito', mensaje: `Pedido ${pedidoCancelacion.id} cancelado correctamente.` });
+             setMostrarModalCancelacion(false);
+             setPedidoCancelacion(null);
+             cargarDatos();
+        } catch (err) {
+            mostrarNotificacion({ tipo: 'error', titulo: 'Error', mensaje: err.message || 'Error al cancelar el pedido.' });
+        } finally {
+            setCargandoCancelacion(false);
         }
     };
 
@@ -707,7 +734,11 @@ const VistaAdmin = () => {
                                 const OrdersTable = React.lazy(() => import('../components/OrdersTable'));
                                 return (
                                     <React.Suspense fallback={<div className="alert alert-info">Cargando pedidos...</div>}>
-                                        <OrdersTable data={pedidos} onAsignar={(p) => abrirModalAsignacionRepartidor(p)} />
+                                        <OrdersTable 
+                                            data={pedidos} 
+                                            onAsignar={(p) => abrirModalAsignacionRepartidor(p)} 
+                                            onCancelar={(p) => abrirModalCancelacion(p)}
+                                        />
                                     </React.Suspense>
                                 );
                             })()}
@@ -902,6 +933,47 @@ const VistaAdmin = () => {
                                     <button type="submit" className="btn btn-primary">Asignar</button>
                                 </div>
                             </form>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Cancelar Pedido */}
+            {mostrarModalCancelacion && pedidoCancelacion && (
+                <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setMostrarModalCancelacion(false)}>
+                    <div className="modal-dialog modal-dialog-centered" onClick={e => e.stopPropagation()}>
+                        <div className="modal-content">
+                            <div className="modal-header">
+                                <h5 className="modal-title">Confirmar Cancelación</h5>
+                                <button type="button" className="btn-close" onClick={() => setMostrarModalCancelacion(false)}></button>
+                            </div>
+                            <div className="modal-body">
+                                <p className="fw-bold mb-3">¿Está seguro de que desea cancelar este pedido?</p>
+                                <div className="alert alert-warning">
+                                    <ul className="mb-0">
+                                        <li><strong>ID Pedido:</strong> {pedidoCancelacion.id}</li>
+                                        <li><strong>Cliente:</strong> {pedidoCancelacion.nombreUsuario}</li>
+                                        <li><strong>Fecha:</strong> {new Date(pedidoCancelacion.fecha || Date.now()).toLocaleDateString()}</li>
+                                        <li><strong>Total:</strong> {aplicarFormatoMoneda(pedidoCancelacion.total)}</li>
+                                    </ul>
+                                </div>
+                                <p className="text-muted small mb-0 mt-3">Esta acción cambiará el estado del pedido a "Cancelado" y revertirá el stock de los productos asociados.</p>
+                            </div>
+                            <div className="modal-footer">
+                                <button type="button" className="btn btn-secondary" onClick={() => setMostrarModalCancelacion(false)} disabled={cargandoCancelacion}>
+                                    Volver
+                                </button>
+                                <button type="button" className="btn btn-danger" onClick={manejarConfirmarCancelacion} disabled={cargandoCancelacion}>
+                                    {cargandoCancelacion ? (
+                                        <>
+                                            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                            Cancelando...
+                                        </>
+                                    ) : (
+                                        'Sí, Cancelar Pedido'
+                                    )}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

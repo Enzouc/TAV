@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { CLAVES_BD } from '../utils/datos';
 
-const baseURL = import.meta.env.VITE_API_BASE_URL || '/api';
+const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 const axiosClient = axios.create({
   baseURL,

@@ -4,11 +4,13 @@ import { guardarUsuarioActual, obtenerCarrito, guardarCarrito } from '../utils/a
 import { usarUI } from '../components/ContextoUI';
 import { Carousel } from 'bootstrap';
 import ProductModal from '../components/ProductModal';
+import { login } from '../services/usersService';
 
 const VistaInicio = () => {
     const navegar = useNavigate();
     const { mostrarNotificacion } = usarUI();
     const [productoModal, setProductoModal] = useState(null);
+    const [cargandoLogin, setCargandoLogin] = useState(false);
 
     // Datos de productos en oferta para renderizado dinámico y consistente
     const PRODUCTOS_OFERTA = [
@@ -83,18 +85,51 @@ const VistaInicio = () => {
         setProductoModal({ ...producto, stock: 50 }); // Stock simulado para ofertas
     };
 
-    const loginTemporal = (rol) => {
-        let usuario;
+    const loginTemporal = async (rol) => {
+        if (cargandoLogin) return;
+        setCargandoLogin(true);
+        
+        let credenciales;
         if (rol === 'admin') {
-            usuario = { id: '#ADMIN', nombre: 'Administrador', email: 'admin@gasexpress.cl', rol: 'admin' };
+            credenciales = { email: 'admin@tav.cl', contrasena: 'admin123' };
         } else if (rol === 'repartidor') {
-            usuario = { id: '#R050', nombre: 'Pedro El Rayo', email: 'pedro@gasexpress.cl', rol: 'repartidor' };
+            credenciales = { email: 'repartidor@tav.cl', contrasena: 'repartidor123' };
+        } else {
+            setCargandoLogin(false);
+            return;
         }
         
-        if (usuario) {
-            guardarUsuarioActual(usuario);
-            if (rol === 'admin') navegar('/admin');
-            if (rol === 'repartidor') navegar('/repartidor');
+        try {
+            const data = await login(credenciales);
+            // El servicio login ya guarda el token en localStorage
+            
+            // Guardamos la información del usuario
+            guardarUsuarioActual({
+                id: data.id,
+                nombre: data.nombre,
+                email: data.email,
+                rol: data.rol
+            });
+
+            mostrarNotificacion({
+                tipo: 'success',
+                titulo: 'Inicio de Sesión Exitoso',
+                mensaje: `Bienvenido ${data.nombre}`
+            });
+
+            if (data.rol === 'admin') navegar('/admin');
+            else if (data.rol === 'repartidor') navegar('/repartidor');
+            else navegar('/'); // Fallback
+            
+        } catch (error) {
+            console.error('Error en login temporal:', error);
+            mostrarNotificacion({
+                tipo: 'error',
+                titulo: 'Error de Acceso',
+                mensaje: error.response?.data?.message || error.message || 'No se pudo iniciar sesión. Verifique conexión.'
+            });
+        } finally {
+            setCargandoLogin(false);
         }
     };
 
@@ -114,8 +149,20 @@ const VistaInicio = () => {
             <div className="container mt-3 text-end">
                 <span className="me-2 badge bg-warning text-dark">Acceso Temporal (Debug)</span>
                 <div className="btn-group">
-                    <button className="btn btn-sm btn-outline-dark" onClick={() => loginTemporal('admin')}>Acceso Admin</button>
-                    <button className="btn btn-sm btn-outline-dark" onClick={() => loginTemporal('repartidor')}>Acceso Repartidor</button>
+                    <button 
+                        className="btn btn-sm btn-outline-dark" 
+                        onClick={() => loginTemporal('admin')}
+                        disabled={cargandoLogin}
+                    >
+                        {cargandoLogin ? '...' : 'Acceso Admin'}
+                    </button>
+                    <button 
+                        className="btn btn-sm btn-outline-dark" 
+                        onClick={() => loginTemporal('repartidor')}
+                        disabled={cargandoLogin}
+                    >
+                        {cargandoLogin ? '...' : 'Acceso Repartidor'}
+                    </button>
                 </div>
             </div>
 

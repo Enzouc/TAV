@@ -25,17 +25,19 @@ export const productSchema = z.object({
 
 // Esquema de Pedido
 export const orderItemSchema = z.object({
-  id: z.string(),
-  nombre: z.string(),
-  precio: z.number(),
+  id_producto: z.string(),
+  nombre_producto: z.string().optional(),
+  precio_unitario: z.number(),
   cantidad: z.number().int().positive(),
 });
 
 export const orderSchema = z.object({
-  idUsuario: z.string(),
+  id_usuario: z.string(),
   items: z.array(orderItemSchema).min(1, 'El pedido debe tener al menos un producto'),
   total: z.number().positive(),
-  direccion: z.string().min(5, 'La dirección es muy corta'),
+  direccion_envio: z.string().min(5, 'La dirección es muy corta'),
+  metodo_pago: z.string().optional(),
+  nombre_usuario: z.string().optional(),
 });
 
 // Helper para validar
