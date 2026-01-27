@@ -1,6 +1,4 @@
 Email,Nueva Contraseña
 admin@tav.cl,Root123!
-admin@gasexpress.cl,Admin123!
-pedro@gasexpress.cl,Pedro123!
-juan@example.com,Juan123!
-maria@example.com,Maria123!
+admin@tav.cl,Admin123!
+pedro@tav.cl,Pedro123!

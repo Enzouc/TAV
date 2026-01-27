@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { register } from '../services/usersService';
 import { guardarUsuarioActual } from '../utils/almacenamiento';
+import { CLAVES_BD } from '../utils/datos';
 import { usarUI } from '../components/ContextoUI';
 
 const VistaRegistro = () => {
@@ -64,7 +65,7 @@ const VistaRegistro = () => {
             guardarUsuarioActual(respuesta);
 
             mostrarNotificacion({ tipo: 'info', titulo: 'Registro exitoso', mensaje: '¡Cuenta creada con éxito!' });
-            navegar('/');
+            navegar('/perfil');
         } catch (err) {
             setError(err.response?.data?.message || err.message || 'Error al registrarse');
         }
@@ -82,26 +83,26 @@ const VistaRegistro = () => {
                                 <form onSubmit={manejarEnvio}>
                                     <div className="row g-3">
                                         <div className="col-12">
-                                            <label className="form-label">Nombre Completo</label>
+                                            <label htmlFor="nombre" className="form-label">Nombre Completo</label>
                                             <input type="text" className="form-control" id="nombre" value={datosFormulario.nombre} onChange={manejarCambio} placeholder="Juan Pérez" required minLength="3" />
                                         </div>
 
                                         <div className="col-md-6">
-                                            <label className="form-label">Correo Electrónico</label>
+                                            <label htmlFor="email" className="form-label">Correo Electrónico</label>
                                             <input type="email" className="form-control" id="email" value={datosFormulario.email} onChange={manejarCambio} placeholder="juan@ejemplo.com" required />
                                         </div>
 
                                         <div className="col-md-6">
-                                            <label className="form-label">Teléfono</label>
+                                            <label htmlFor="telefono" className="form-label">Teléfono</label>
                                             <input type="tel" className="form-control" id="telefono" value={datosFormulario.telefono} onChange={manejarCambio} placeholder="+56 9 1234 5678" required />
                                         </div>
 
                                         <div className="col-md-6">
-                                            <label className="form-label">Contraseña</label>
+                                            <label htmlFor="contrasena" className="form-label">Contraseña</label>
                                             <input type="password" className="form-control" id="contrasena" value={datosFormulario.contrasena} onChange={manejarCambio} required minLength="4" />
                                         </div>
                                         <div className="col-md-6">
-                                            <label className="form-label">Confirmar Contraseña</label>
+                                            <label htmlFor="confirmarContrasena" className="form-label">Confirmar Contraseña</label>
                                             <input type="password" className="form-control" id="confirmarContrasena" value={datosFormulario.confirmarContrasena} onChange={manejarCambio} required minLength="4" />
                                         </div>
 
@@ -110,21 +111,21 @@ const VistaRegistro = () => {
                                         </div>
 
                                         <div className="col-md-8">
-                                            <label className="form-label">Calle</label>
+                                            <label htmlFor="calle" className="form-label">Calle</label>
                                             <input type="text" className="form-control" id="calle" value={datosFormulario.calle} onChange={manejarCambio} required />
                                         </div>
                                         <div className="col-md-4">
-                                            <label className="form-label">Número</label>
+                                            <label htmlFor="numero" className="form-label">Número</label>
                                             <input type="text" className="form-control" id="numero" value={datosFormulario.numero} onChange={manejarCambio} required />
                                         </div>
                                         <div className="col-md-6">
-                                            <label className="form-label">Región</label>
+                                            <label htmlFor="region" className="form-label">Región</label>
                                             <select className="form-select" id="region" value={datosFormulario.region} onChange={manejarCambio}>
                                                 <option value="Biobío">Biobío</option>
                                             </select>
                                         </div>
                                         <div className="col-md-6">
-                                            <label className="form-label">Comuna</label>
+                                            <label htmlFor="comuna" className="form-label">Comuna</label>
                                             <select className="form-select" id="comuna" value={datosFormulario.comuna} onChange={manejarCambio} required>
                                                 <option value="">Seleccionar...</option>
                                                 <option value="Concepción">Concepción</option>
