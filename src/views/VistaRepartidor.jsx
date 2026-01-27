@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { obtenerUsuarioActual } from '../utils/almacenamiento';
 import { CLAVES_BD } from '../utils/datos';
-import { obtenerPedidosPorRepartidor, actualizarEstadoPedido } from '../utils/pedido';
+import { logout } from '../services/usersService';
+import { getOrders, updateOrderStatus } from '../services/ordersService';
 import { aplicarFormatoMoneda } from '../utils/datos';
 import { usarUI } from '../components/ContextoUI';
+import { cerrarSesion as cerrarSesionLocal } from '../utils/autenticacion';
 
 const VistaRepartidor = () => {
     const [pedidos, setPedidos] = useState([]);
@@ -15,24 +17,33 @@ const VistaRepartidor = () => {
 
     useEffect(() => {
         cargarPedidos();
+        
+        // Polling para actualización en tiempo real (cada 5 segundos)
+        const intervalo = setInterval(cargarPedidos, 5000);
+        return () => clearInterval(intervalo);
     }, []);
 
-    const cargarPedidos = () => {
+    const cargarPedidos = async () => {
         if (!usuario) return;
         
-        // Usar lógica modular para obtener pedidos
-        const misPedidos = obtenerPedidosPorRepartidor(usuario.id).filter(p => p.estado !== 'Cancelado');
-        
-        // Estadísticas
-        const conteoEnRuta = misPedidos.filter(p => p.estado === 'En Camino').length;
-        const conteoEntregados = misPedidos.filter(p => p.estado === 'Entregado').length;
-        const conteoPendientes = misPedidos.filter(p => p.estado === 'Pendiente').length;
-        
-        setEstadisticas({ enRuta: conteoEnRuta, entregados: conteoEntregados, pendientes: conteoPendientes });
-        
-        // Mostrar pedidos activos (no entregados)
-        const pedidosActivos = misPedidos.filter(p => p.estado !== 'Entregado');
-        setPedidos(pedidosActivos);
+        try {
+            // Usar API para obtener pedidos asignados al repartidor
+            const data = await getOrders({ repartidor: usuario.id });
+            const misPedidos = (Array.isArray(data) ? data : (data.data || [])).filter(p => p.estado !== 'Cancelado');
+            
+            // Estadísticas
+            const conteoEnRuta = misPedidos.filter(p => p.estado === 'En Camino').length;
+            const conteoEntregados = misPedidos.filter(p => p.estado === 'Entregado').length;
+            const conteoPendientes = misPedidos.filter(p => p.estado === 'Pendiente').length;
+            
+            setEstadisticas({ enRuta: conteoEnRuta, entregados: conteoEntregados, pendientes: conteoPendientes });
+            
+            // Mostrar pedidos activos (no entregados)
+            const pedidosActivos = misPedidos.filter(p => p.estado !== 'Entregado');
+            setPedidos(pedidosActivos);
+        } catch (error) {
+            console.error("Error cargando pedidos de repartidor", error);
+        }
     };
 
     const actualizarEstado = (idPedido, nuevoEstado) => {
@@ -40,13 +51,13 @@ const VistaRepartidor = () => {
             titulo: 'Cambiar estado',
             mensaje: `¿Cambiar estado del pedido a "${nuevoEstado}"?`,
             severidad: 'warning',
-            alConfirmar: () => {
+            alConfirmar: async () => {
                 try {
-                    actualizarEstadoPedido(idPedido, nuevoEstado);
+                    await updateOrderStatus(idPedido, nuevoEstado);
                     cargarPedidos();
                     mostrarNotificacion({ tipo: 'info', titulo: 'Estado actualizado', mensaje: `El pedido ahora está "${nuevoEstado}".` });
                 } catch (error) {
-                    mostrarNotificacion({ tipo: 'error', titulo: 'Error', mensaje: 'Error al actualizar estado: ' + error.message });
+                    mostrarNotificacion({ tipo: 'error', titulo: 'Error', mensaje: 'Error al actualizar estado: ' + (error.message || 'Error desconocido') });
                 }
             }
         });
@@ -67,15 +78,13 @@ const VistaRepartidor = () => {
                     <span className="badge bg-dark fs-6">{usuario.nombre}</span>
                     <button
                         className="btn btn-outline-danger btn-sm"
-                        onClick={() => {
+                        onClick={async () => {
                             try {
-                                localStorage.removeItem(CLAVES_BD.SESSION_TOKEN);
-                                localStorage.removeItem(CLAVES_BD.CSRF_TOKEN);
-                                localStorage.removeItem(CLAVES_BD.SESSION_EXP);
-                                localStorage.removeItem(CLAVES_BD.USUARIO_ACTUAL);
-                                localStorage.removeItem(CLAVES_BD.CARRITO);
+                                await logout();
+                            } catch (error) {
+                                console.error('Error al cerrar sesión:', error);
                             } finally {
-                                navegar('/');
+                                cerrarSesionLocal();
                             }
                         }}
                     >
@@ -137,14 +146,24 @@ const VistaRepartidor = () => {
                                     <td><span className={`badge ${obtenerClaseEstado(pedido.estado)}`}>{pedido.estado}</span></td>
                                     <td>
                                         {pedido.estado === 'Pendiente' && (
-                                            <button className="btn btn-sm btn-primary" onClick={() => actualizarEstado(pedido.id, 'En Camino')}>
-                                                Iniciar Ruta
-                                            </button>
+                                            <>
+                                                <button className="btn btn-sm btn-primary me-2" onClick={() => actualizarEstado(pedido.id, 'En Camino')}>
+                                                    Marcar en camino
+                                                </button>
+                                                <button className="btn btn-sm btn-outline-danger" onClick={() => actualizarEstado(pedido.id, 'Cancelado')}>
+                                                    Cancelar pedido
+                                                </button>
+                                            </>
                                         )}
                                         {pedido.estado === 'En Camino' && (
-                                            <button className="btn btn-sm btn-success" onClick={() => actualizarEstado(pedido.id, 'Entregado')}>
-                                                Confirmar Entrega
-                                            </button>
+                                            <>
+                                                <button className="btn btn-sm btn-success me-2" onClick={() => actualizarEstado(pedido.id, 'Entregado')}>
+                                                    Confirmar entrega
+                                                </button>
+                                                <button className="btn btn-sm btn-outline-danger" onClick={() => actualizarEstado(pedido.id, 'Cancelado')}>
+                                                    Cancelar pedido
+                                                </button>
+                                            </>
                                         )}
                                     </td>
                                 </tr>

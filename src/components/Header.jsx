@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { obtenerUsuarioActual, obtenerCarrito } from '../utils/almacenamiento';
-import { cerrarSesion } from '../utils/autenticacion';
+import { cerrarSesion as cerrarSesionLocal } from '../utils/autenticacion';
+import { logout } from '../services/usersService';
 import { CLAVES_BD } from '../utils/datos';
 import '../styles/header.css';
 
@@ -9,8 +10,7 @@ const Header = () => {
     const navegar = useNavigate();
     const [usuario, setUsuario] = useState(obtenerUsuarioActual());
     const [cantidadCarrito, setCantidadCarrito] = useState(0);
-    const toggleRef = useRef(null);
-    const menuRef = useRef(null);
+    const [mostrarMenu, setMostrarMenu] = useState(false);
 
     const actualizarAutenticacion = () => setUsuario(obtenerUsuarioActual());
     const actualizarCarrito = () => {
@@ -31,23 +31,17 @@ const Header = () => {
             window.removeEventListener('carrito-actualizado', actualizarCarrito);
         };
     }, []);
+
+    // Cerrar menú al hacer click fuera
     useEffect(() => {
-        const btn = toggleRef.current;
-        if (!btn) return;
-        const handleShown = () => {
-            const firstItem = menuRef.current?.querySelector('a,button');
-            firstItem?.focus();
+        const clickFuera = (e) => {
+            if (mostrarMenu && !e.target.closest('.dropdown')) {
+                setMostrarMenu(false);
+            }
         };
-        const handleHidden = () => {
-            btn.focus();
-        };
-        btn.addEventListener('shown.bs.dropdown', handleShown);
-        btn.addEventListener('hidden.bs.dropdown', handleHidden);
-        return () => {
-            btn.removeEventListener('shown.bs.dropdown', handleShown);
-            btn.removeEventListener('hidden.bs.dropdown', handleHidden);
-        };
-    }, []);
+        document.addEventListener('click', clickFuera);
+        return () => document.removeEventListener('click', clickFuera);
+    }, [mostrarMenu]);
 
     const trackEvent = (tipo, detalle = {}) => {
         try {
@@ -57,9 +51,15 @@ const Header = () => {
         } catch {}
     };
 
-    const manejarCierreSesion = () => {
+    const manejarCierreSesion = async () => {
         trackEvent('menu_logout_click', { idUsuario: usuario?.id });
-        cerrarSesion();
+        try {
+            await logout();
+        } catch (error) {
+            console.error('Error al cerrar sesión en servidor:', error);
+        } finally {
+            cerrarSesionLocal();
+        }
     };
     const manejarMiCuenta = () => {
         trackEvent('menu_profile_click', { idUsuario: usuario?.id });
@@ -87,36 +87,33 @@ const Header = () => {
                 {usuario ? (
                     <div className="dropdown d-inline-block">
                         <button
-                            ref={toggleRef}
-                            className="btn-nav btn-outline dropdown-toggle"
+                            className={`btn-nav btn-outline dropdown-toggle ${mostrarMenu ? 'show' : ''}`}
                             type="button"
-                            data-bs-toggle="dropdown"
-                            aria-haspopup="menu"
-                            aria-controls="menu-usuario"
+                            onClick={() => setMostrarMenu(!mostrarMenu)}
+                            aria-expanded={mostrarMenu}
+                            aria-haspopup="true"
                         >
                             👤 {usuario.nombre.split(' ')[0]}
                         </button>
                         <ul
-                            id="menu-usuario"
-                            ref={menuRef}
-                            className="dropdown-menu dropdown-menu-end fade-soft"
+                            className={`dropdown-menu dropdown-menu-end fade-soft ${mostrarMenu ? 'show' : ''}`}
+                            style={{ display: mostrarMenu ? 'block' : 'none', position: 'absolute', right: 0, left: 'auto' }}
                             role="menu"
-                            aria-label="Menú de usuario"
                         >
                             <li>
-                                <button className="dropdown-item" role="menuitem" onClick={manejarMiCuenta}>
+                                <button className="dropdown-item" role="menuitem" onClick={() => { manejarMiCuenta(); setMostrarMenu(false); }}>
                                     👤 Mi cuenta
                                 </button>
                             </li>
                             {usuario.rol === 'repartidor' && (
-                                <li><Link className="dropdown-item" role="menuitem" to="/repartidor">🚚 Panel Repartidor</Link></li>
+                                <li><Link className="dropdown-item" role="menuitem" to="/repartidor" onClick={() => setMostrarMenu(false)}>🚚 Panel Repartidor</Link></li>
                             )}
                             {usuario.rol === 'admin' && (
-                                <li><Link className="dropdown-item" role="menuitem" to="/admin">🛠️ Panel Admin</Link></li>
+                                <li><Link className="dropdown-item" role="menuitem" to="/admin" onClick={() => setMostrarMenu(false)}>🛠️ Panel Admin</Link></li>
                             )}
                             <li><hr className="dropdown-divider" /></li>
                             <li>
-                                <button className="dropdown-item text-danger" role="menuitem" onClick={manejarCierreSesion}>
+                                <button className="dropdown-item text-danger" role="menuitem" onClick={() => { manejarCierreSesion(); setMostrarMenu(false); }}>
                                     🚪 Cerrar sesión
                                 </button>
                             </li>

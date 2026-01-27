@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { obtenerCarrito, guardarCarrito, obtenerUsuarioActual } from '../utils/almacenamiento';
-import { crearPedido } from '../utils/pedido';
+import { createOrder } from '../services/ordersService';
 import { crearDetallePedido } from '../utils/detallePedido';
 import { usarUI } from '../components/ContextoUI';
 
@@ -45,7 +45,7 @@ const VistaCarrito = () => {
         guardarCarrito(nuevoCarrito);
     };
 
-    const manejarPago = () => {
+    const manejarPago = async () => {
         if (!usuario) {
             mostrarNotificacion({ tipo: 'warning', titulo: 'Inicia sesión', mensaje: 'Debes iniciar sesión para realizar el pedido.', autoCierreMs: 4000 });
             navegar('/iniciar-sesion');
@@ -69,30 +69,36 @@ const VistaCarrito = () => {
                 idRepartidor = '#R050'; 
             }
 
-            const direccionStr = usuario.direccion ? `${usuario.direccion.calle} ${usuario.direccion.numero}, ${usuario.direccion.comuna}` : 'Dirección no registrada';
-            const idPedido = '#ORD-' + Date.now().toString().slice(-6);
+            const direccionStr = usuario.direccion ? (typeof usuario.direccion === 'string' ? usuario.direccion : `${usuario.direccion.calle} ${usuario.direccion.numero}, ${usuario.direccion.comuna}`) : 'Dirección no registrada';
+            
+            // Construir objeto de pedido para la API
+            const itemsAPI = elementos.map(item => ({
+                id_producto: item.productoId,
+                nombre_producto: item.nombre,
+                precio_unitario: item.precio,
+                cantidad: item.cantidad
+            }));
 
-            // Crear pedido usando lógica de pedido
-            crearPedido(
-                idPedido,
-                usuario.id,
-                usuario.nombre,
-                usuario.telefono || '',
-                direccionStr,
-                total,
-                'Pendiente',
-                idRepartidor,
-                null, // la fecha por defecto es ahora
-                'Efectivo',
-                elementos
-            );
+            const nuevoPedido = {
+                id_usuario: usuario.id,
+                nombre_usuario: usuario.nombre,
+                telefono_usuario: usuario.telefono || '',
+                direccion_envio: direccionStr,
+                total: total,
+                metodo_pago: 'Efectivo', // O el que seleccione el usuario si implementas selector
+                items: itemsAPI
+                // estado y repartidorId se manejan en backend o por defecto
+            };
+
+            // Crear pedido usando servicio API
+            await createOrder(nuevoPedido);
 
             guardarCarrito([]); // Limpiar carrito
             mostrarNotificacion({ tipo: 'info', titulo: 'Pedido realizado', mensaje: 'Tu pedido fue creado con éxito.' });
             navegar('/pedidos');
         } catch (error) {
             console.error('Error al crear el pedido:', error);
-            mostrarNotificacion({ tipo: 'error', titulo: 'Error', mensaje: 'Hubo un error al procesar tu pedido. Inténtalo de nuevo.' });
+            mostrarNotificacion({ tipo: 'error', titulo: 'Error', mensaje: 'Hubo un error al procesar tu pedido. Inténtalo de nuevo. ' + (error.message || '') });
         }
     };
 

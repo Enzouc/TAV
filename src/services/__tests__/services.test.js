@@ -20,7 +20,7 @@ describe('Servicios con Axios', () => {
 
   it('crea producto y retorna respuesta', async () => {
     const spy = vi.spyOn(axiosClient, 'post').mockResolvedValue({ id: 'pX' });
-    const r = await createProduct({ nombre: 'Gas 11kg', precio: 15000, stock: 10 });
+    const r = await createProduct({ nombre: 'Gas 11kg', precio: 15000, stock: 10, categoria: 'Cilindros' });
     expect(spy).toHaveBeenCalledWith('/products', expect.any(Object), expect.any(Object));
     expect(r.id).toBe('pX');
   });

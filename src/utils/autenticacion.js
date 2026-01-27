@@ -20,15 +20,37 @@ const sesionActiva = () => {
 export const iniciarSesion = (email, contrasena) => {
     try {
         const intentos = JSON.parse(localStorage.getItem(CLAVES_BD.LOGIN_ATTEMPTS) || '{}');
+        
+        // PROTECCIÓN ROOT: Inmunidad al bloqueo
+        // Si es el admin root, reseteamos sus intentos y aseguramos que esté activo
+        // Esto permite recuperar el acceso inmediatamente si fue bloqueado por error
+        if (email === 'admin@tav.cl') {
+            intentos[email] = 0;
+            localStorage.setItem(CLAVES_BD.LOGIN_ATTEMPTS, JSON.stringify(intentos));
+            
+            const usuarios = obtenerUsuarios();
+            const u = usuarios.find(x => x.email === email);
+            if (u && u.estado === 'bloqueado') {
+                u.estado = 'activo';
+                guardarUsuarios(usuarios);
+            }
+        }
+
         const cantidad = intentos[email] || 0;
         if (cantidad >= 5) {
             const usuarios = obtenerUsuarios();
             const u = usuarios.find(x => x.email === email);
-            if (u && u.id !== '#ADMIN_ROOT') {
+            // Doble verificación para proteger al root
+            if (u && u.id !== '#ADMIN_ROOT' && u.email !== 'admin@tav.cl') {
                 u.estado = 'bloqueado';
                 guardarUsuarios(usuarios);
             }
-            return { exito: false, mensaje: 'Cuenta bloqueada por múltiples intentos.' };
+            // Si es root, permitimos intentar de nuevo (aunque debería haberse reseteado arriba)
+            if (u && (u.id === '#ADMIN_ROOT' || u.email === 'admin@tav.cl')) {
+                 // No retornamos error de bloqueo para root, dejamos pasar a autenticación
+            } else {
+                return { exito: false, mensaje: 'Cuenta bloqueada por múltiples intentos.' };
+            }
         }
 
         const usuario = autenticarUsuario(email, contrasena);

@@ -4,9 +4,24 @@ import { z } from 'zod';
 export const userSchema = z.object({
   nombre: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
   email: z.string().email('Email inválido'),
-  contrasena: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres').optional().or(z.literal('')),
+  contrasena: z.string()
+      .min(8, 'La contraseña debe tener al menos 8 caracteres')
+      .regex(/[A-Z]/, 'La contraseña debe contener al menos una mayúscula')
+      .regex(/[0-9]/, 'La contraseña debe contener al menos un número')
+      .regex(/[^A-Za-z0-9]/, 'La contraseña debe contener al menos un carácter especial')
+      .optional().or(z.literal('')),
   rol: z.enum(['usuario', 'repartidor', 'admin']).optional(),
   telefono: z.string().regex(/^(\+56\s?9\s?\d{4}\s?\d{4}|\+?\d{8,12})$/, 'Formato de teléfono inválido').optional().or(z.literal('')),
+  direccion: z.object({
+    calle: z.string().optional(),
+    numero: z.string().optional(),
+    comuna: z.string().refine(val => ['Concepción', 'Talcahuano', 'Hualpén', 'San Pedro de la Paz', 'Chiguayante'].includes(val), {
+        message: "La comuna debe ser Concepción o alrededores (Talcahuano, Hualpén, San Pedro, Chiguayante)"
+    }).optional(),
+    region: z.string().refine(val => ['Biobío', 'Región del Biobío'].includes(val), {
+        message: "La región debe ser Biobío"
+    }).optional()
+  }).optional().or(z.string())
 });
 
 // Esquema de Login
@@ -45,7 +60,15 @@ export const validate = (schema, data) => {
   try {
     return { success: true, data: schema.parse(data) };
   } catch (error) {
-    const errors = error.errors.map(e => e.message).join(', ');
-    return { success: false, error: errors };
+    if (error && error.errors) {
+        const errors = error.errors.map(e => e.message).join(', ');
+        const fieldErrors = {};
+        error.errors.forEach(e => {
+            const path = e.path.join('.');
+            fieldErrors[path] = e.message;
+        });
+        return { success: false, error: errors, fieldErrors };
+    }
+    return { success: false, error: error.message || 'Error de validación desconocido' };
   }
 };

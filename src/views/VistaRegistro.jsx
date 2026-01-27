@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { crearUsuario, autenticarUsuario } from '../utils/usuario';
+import { register } from '../services/usersService';
 import { guardarUsuarioActual } from '../utils/almacenamiento';
 import { usarUI } from '../components/ContextoUI';
 
@@ -27,7 +27,7 @@ const VistaRegistro = () => {
         });
     };
 
-    const manejarEnvio = (e) => {
+    const manejarEnvio = async (e) => {
         e.preventDefault();
         setError('');
 
@@ -45,25 +45,28 @@ const VistaRegistro = () => {
                 comuna: datosFormulario.comuna
             };
 
-            crearUsuario(
-                null, 
-                datosFormulario.nombre, 
-                datosFormulario.email, 
-                datosFormulario.contrasena, 
-                'usuario', 
-                'activo', 
-                datosFormulario.telefono, 
-                direccion
-            );
+            const nuevoUsuario = {
+                nombre: datosFormulario.nombre,
+                email: datosFormulario.email,
+                contrasena: datosFormulario.contrasena,
+                telefono: datosFormulario.telefono,
+                direccion: direccion,
+                rol: 'usuario'
+            };
 
-            // Auto iniciar sesión
-            const usuario = autenticarUsuario(datosFormulario.email, datosFormulario.contrasena);
-            guardarUsuarioActual(usuario);
+            const respuesta = await register(nuevoUsuario);
+            
+            // Si el backend devuelve el token, lo guardamos para autenticar automáticamente
+            if (respuesta.token) {
+                localStorage.setItem(CLAVES_BD.SESSION_TOKEN, respuesta.token);
+            }
+            
+            guardarUsuarioActual(respuesta);
 
             mostrarNotificacion({ tipo: 'info', titulo: 'Registro exitoso', mensaje: '¡Cuenta creada con éxito!' });
             navegar('/');
         } catch (err) {
-            setError(err.message);
+            setError(err.response?.data?.message || err.message || 'Error al registrarse');
         }
     };
 

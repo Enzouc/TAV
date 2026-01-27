@@ -1,59 +1,49 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { aplicarFormatoMoneda } from '../utils/datos';
-import { obtenerProductos, obtenerCarrito, guardarCarrito } from '../utils/almacenamiento';
+import { obtenerCarrito, guardarCarrito } from '../utils/almacenamiento';
 import { usarUI } from '../components/ContextoUI';
+import { getProducts } from '../services/productsService';
 
 const VistaOfertas = () => {
     const { mostrarNotificacion } = usarUI();
-    const ofertas = [
-        {
-            id: 'oferta-15',
-            badge: '-15% OFF',
-            imagen: 'productos_gas/producto-gas-15-kg.png',
-            titulo: 'Pack Familiar 15Kg',
-            descripcion: 'Ideal para familias grandes. Incluye instalación gratuita.',
-            precioOriginal: 22500,
-            precioFinal: 19125,
-            productoId: '#P002'
-        },
-        {
-            id: 'oferta-5',
-            badge: '2x1',
-            imagen: 'productos_gas/producto-gas-5-kg.png',
-            titulo: 'Camping Pack 5Kg',
-            descripcion: 'Lleva 2 cilindros de 5kg y paga solo 1. Solo Concepción.',
-            precioOriginal: 15000,
-            precioFinal: 7500,
-            productoId: '#P004'
-        },
-        {
-            id: 'oferta-45',
-            badge: 'Envío Gratis',
-            imagen: 'productos_gas/producto-gas-45-kg.png',
-            titulo: 'Cilindro Industrial 45Kg',
-            descripcion: 'Para alto consumo. Envío gratis en todo el Gran Concepción.',
-            precioOriginal: 65000,
-            precioFinal: 58000,
-            productoId: '#P003'
-        }
-    ];
+    const [ofertas, setOfertas] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    const inventario = useMemo(() => obtenerProductos(), []);
-
-    const calcularDescuento = (oferta) => {
-        const pct = Math.round((1 - oferta.precioFinal / oferta.precioOriginal) * 100);
-        const ahorro = oferta.precioOriginal - oferta.precioFinal;
-        return { pct: Math.max(pct, 0), ahorro };
-    };
-
-    const obtenerStock = (productoId) => {
-        const p = inventario.find(x => x.id === productoId);
-        return p ? p.stock : 0;
-    };
+    useEffect(() => {
+        const cargarOfertas = async () => {
+            try {
+                const res = await getProducts();
+                const productos = Array.isArray(res) ? res : (res.data || []);
+                
+                // Simular ofertas basadas en productos reales
+                const ofertasGeneradas = productos.map((prod, index) => {
+                    const descuento = [0.10, 0.15, 0.05, 0.20][index % 4]; // Descuentos variados
+                    const precioOriginal = Math.round(prod.precio * (1 + descuento));
+                    return {
+                        id: `oferta-${prod.id}`,
+                        badge: `-${Math.round(descuento * 100)}% OFF`,
+                        imagen: prod.imagen || 'productos_gas/producto-gas-15-kg.png',
+                        titulo: prod.nombre,
+                        descripcion: prod.descripcion,
+                        precioOriginal: precioOriginal,
+                        precioFinal: prod.precio,
+                        productoId: prod.id,
+                        stock: prod.stock
+                    };
+                });
+                setOfertas(ofertasGeneradas);
+            } catch (error) {
+                console.error("Error cargando ofertas", error);
+                mostrarNotificacion({ tipo: 'error', titulo: 'Error', mensaje: 'No se pudieron cargar las ofertas.' });
+            } finally {
+                setLoading(false);
+            }
+        };
+        cargarOfertas();
+    }, [mostrarNotificacion]);
 
     const manejarAgregar = (oferta) => {
-        const stock = obtenerStock(oferta.productoId);
-        if (stock <= 0) {
+        if (oferta.stock <= 0) {
             mostrarNotificacion({ tipo: 'warning', titulo: 'Sin stock', mensaje: 'Este producto está agotado.' });
             return;
         }
@@ -61,19 +51,22 @@ const VistaOfertas = () => {
         const idx = carrito.findIndex(i => i.id === oferta.productoId);
         if (idx > -1) {
             carrito[idx].cantidad += 1;
-            carrito[idx].precio = oferta.precioFinal;
+            // carrito[idx].precio = oferta.precioFinal; // Usamos el precio actual
         } else {
-            const producto = inventario.find(x => x.id === oferta.productoId);
             carrito.push({
                 id: oferta.productoId,
-                nombre: producto ? producto.nombre : oferta.titulo,
+                nombre: oferta.titulo,
                 cantidad: 1,
-                precio: oferta.precioFinal
+                precio: oferta.precioFinal,
+                img: oferta.imagen
             });
         }
         guardarCarrito(carrito);
         mostrarNotificacion({ tipo: 'info', titulo: 'Añadido al carrito', mensaje: `${oferta.titulo} agregado correctamente.` });
+        window.dispatchEvent(new Event('carrito-actualizado'));
     };
+
+    if (loading) return <div className="text-center py-5"><div className="spinner-border text-primary"></div></div>;
 
     return (
         <main className="container py-4">
@@ -83,7 +76,7 @@ const VistaOfertas = () => {
                     <p className="text-muted mb-4">Aprovecha nuestros descuentos por tiempo limitado.</p>
 
                 <div className="row g-4">
-                    {ofertas.map(oferta => (
+                    {ofertas.length > 0 ? ofertas.map(oferta => (
                         <div key={oferta.id} className="col-sm-6 col-lg-4">
                             <div className="card h-100 oferta-card">
                                 <div className="position-relative">
@@ -95,7 +88,7 @@ const VistaOfertas = () => {
                                         loading="lazy"
                                         width="400"
                                         height="300"
-                                        style={{ objectFit: 'cover' }}
+                                        style={{ objectFit: 'contain', maxHeight: '200px', padding: '1rem' }}
                                     />
                                 </div>
                                 <div className="card-body d-flex flex-column">
@@ -111,19 +104,16 @@ const VistaOfertas = () => {
                                             </span>
                                         </div>
                                         <small className="text-success d-block mt-1">
-                                            {(() => {
-                                                const { pct, ahorro } = calcularDescuento(oferta);
-                                                return `Ahorra ${aplicarFormatoMoneda(ahorro)} (${pct}% descuento)`;
-                                            })()}
+                                            Ahorra {aplicarFormatoMoneda(oferta.precioOriginal - oferta.precioFinal)}
                                         </small>
                                         <div className="d-flex align-items-center justify-content-between mt-3">
-                                            <span className={`badge ${obtenerStock(oferta.productoId) > 0 ? 'bg-success' : 'bg-secondary'}`}>
-                                                {obtenerStock(oferta.productoId) > 0 ? 'Disponible' : 'Agotado'}
+                                            <span className={`badge ${oferta.stock > 0 ? 'bg-success' : 'bg-secondary'}`}>
+                                                {oferta.stock > 0 ? 'Disponible' : 'Agotado'}
                                             </span>
                                             <button
                                                 className="btn btn-primary btn-sm"
                                                 onClick={() => manejarAgregar(oferta)}
-                                                disabled={obtenerStock(oferta.productoId) <= 0}
+                                                disabled={oferta.stock <= 0}
                                             >
                                                 Añadir al carrito
                                             </button>
@@ -132,7 +122,9 @@ const VistaOfertas = () => {
                                 </div>
                             </div>
                         </div>
-                    ))}
+                    )) : (
+                        <div className="col-12 text-center">No hay ofertas disponibles en este momento.</div>
+                    )}
                 </div>
             </div>
             </div>

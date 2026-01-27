@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { obtenerUsuarioActual } from '../utils/almacenamiento';
-import { obtenerPedidosPorUsuario } from '../utils/pedido';
+import { getOrders } from '../services/ordersService';
 import { aplicarFormatoMoneda } from '../utils/datos';
 
 const VistaPedidos = () => {
@@ -9,9 +9,22 @@ const VistaPedidos = () => {
 
     useEffect(() => {
         if (usuario) {
-            const misPedidos = obtenerPedidosPorUsuario(usuario.id);
-            // Ordenar por fecha desc
-            setPedidos(misPedidos.reverse());
+            const cargar = async () => {
+                try {
+                    const data = await getOrders({ userId: usuario.id });
+                    // Handle if backend returns { data: [...] } or [...]
+                    const listaPedidos = Array.isArray(data) ? data : (data.data || []);
+                    // Backend likely returns ordered by date, but we can ensure it
+                    setPedidos(listaPedidos);
+                } catch (error) {
+                    console.error("Error cargando pedidos", error);
+                }
+            };
+            cargar();
+            
+            // Polling para actualización en tiempo real (cada 5 segundos)
+            const intervalo = setInterval(cargar, 5000);
+            return () => clearInterval(intervalo);
         }
     }, [usuario]);
 

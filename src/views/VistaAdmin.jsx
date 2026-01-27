@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { aplicarFormatoMoneda, CLAVES_BD } from '../utils/datos';
 import { cerrarSesion } from '../utils/autenticacion';
-import { obtenerTodosLosUsuarios, adminCrearUsuario, adminActualizarUsuario, validarFormatoIdPorRol, generarIdPorRol, adminEliminarUsuario } from '../utils/usuario';
-import { obtenerTodosLosProductos, agregarProducto, eliminarProducto, actualizarProducto } from '../utils/producto';
-import { obtenerTodosLosPedidos, asignarRepartidor } from '../utils/pedido';
+import { getUsers, createUser, updateUser, deleteUser } from '../services/usersService';
+import { getProducts, createProduct, updateProduct, deleteProduct } from '../services/productsService';
+import { getOrders, assignOrder, updateOrderStatus, deleteOrder } from '../services/ordersService';
 import { usarUI } from '../components/ContextoUI';
 import { obtenerUsuarioActual } from '../utils/almacenamiento';
 
@@ -13,7 +13,10 @@ const VistaAdmin = () => {
     const [estadisticas, setEstadisticas] = useState({ ventas: 0, pedidosActivos: 0, repartidores: 0, bajoStock: 0 });
     const [productos, setProductos] = useState([]);
     const [usuarios, setUsuarios] = useState([]);
+    const [pedidos, setPedidos] = useState([]);
     
+    const usuarioActual = obtenerUsuarioActual();
+
     const [mostrarModalProducto, setMostrarModalProducto] = useState(false);
     const [mostrarModalUsuario, setMostrarModalUsuario] = useState(false);
     const [creandoUsuario, setCreandoUsuario] = useState(false);
@@ -21,8 +24,33 @@ const VistaAdmin = () => {
     const [errorIdUsuario, setErrorIdUsuario] = useState('');
     const [editandoProducto, setEditandoProducto] = useState(null);
     const [editandoUsuario, setEditandoUsuario] = useState(null);
+    
+    // Estado para modal de detalles de pedido
+    const [mostrarModalDetalle, setMostrarModalDetalle] = useState(false);
+    const [pedidoDetalle, setPedidoDetalle] = useState(null);
+    const [notaAdmin, setNotaAdmin] = useState('');
+    const [estadoEdicion, setEstadoEdicion] = useState('');
+
     const [errorProducto, setErrorProducto] = useState('');
     const [errorUsuario, setErrorUsuario] = useState('');
+    const [validacionPassword, setValidacionPassword] = useState({
+        largo: false,
+        mayuscula: false,
+        numero: false,
+        especial: false
+    });
+    const [passwordInput, setPasswordInput] = useState('');
+
+    const verificarPassword = (pass) => {
+        setPasswordInput(pass);
+        setValidacionPassword({
+            largo: pass.length >= 8,
+            mayuscula: /[A-Z]/.test(pass),
+            numero: /[0-9]/.test(pass),
+            especial: /[^A-Za-z0-9]/.test(pass)
+        });
+    };
+
     const [mostrarModalAsignacion, setMostrarModalAsignacion] = useState(false);
     const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null);
     const [idRepartidorSeleccionado, setIdRepartidorSeleccionado] = useState('');
@@ -45,22 +73,30 @@ const VistaAdmin = () => {
     const [errorGeneral, setErrorGeneral] = useState('');
     const [cargando, setCargando] = useState(false);
 
-    const cargarDatos = () => {
+    const cargarDatos = async () => {
         try {
             setCargando(true);
             setErrorGeneral('');
-            const todosLosPedidos = obtenerTodosLosPedidos();
-            const todosLosUsuarios = obtenerTodosLosUsuarios();
-            const todosLosProductos = obtenerTodosLosProductos();
+            
+            const [pedidosRes, usuariosRes, productosRes] = await Promise.all([
+                getOrders({ pageSize: 1000 }), // Traer todos para estadísticas
+                getUsers(),
+                getProducts()
+            ]);
+
+            const todosLosPedidos = Array.isArray(pedidosRes) ? pedidosRes : (pedidosRes.data || []);
+            const todosLosUsuarios = Array.isArray(usuariosRes) ? usuariosRes : (usuariosRes.data || []);
+            const todosLosProductos = Array.isArray(productosRes) ? productosRes : (productosRes.data || []);
 
             setUsuarios(todosLosUsuarios);
             setProductos(todosLosProductos);
+            setPedidos(todosLosPedidos);
 
-        // Calcular Estadísticas
-        const ventasTotales = todosLosPedidos.reduce((suma, pedido) => suma + (pedido.total || 0), 0);
-        const pedidosActivos = todosLosPedidos.filter(p => p.estado !== 'Entregado' && p.estado !== 'Cancelado').length;
-        const cantidadRepartidores = todosLosUsuarios.filter(u => u.rol === 'repartidor').length;
-        const stockBajo = todosLosProductos.filter(p => p.stock < 10).length;
+            // Calcular Estadísticas
+            const ventasTotales = todosLosPedidos.reduce((suma, pedido) => suma + (pedido.total || 0), 0);
+            const pedidosActivos = todosLosPedidos.filter(p => p.estado !== 'Entregado' && p.estado !== 'Cancelado').length;
+            const cantidadRepartidores = todosLosUsuarios.filter(u => u.rol === 'repartidor').length;
+            const stockBajo = todosLosProductos.filter(p => p.stock < 10).length;
 
             setEstadisticas({
                 ventas: ventasTotales,
@@ -69,19 +105,20 @@ const VistaAdmin = () => {
                 bajoStock: stockBajo
             });
         } catch (err) {
-            setErrorGeneral('Error cargando datos del panel: ' + err.message);
+            console.error(err);
+            setErrorGeneral('Error cargando datos del panel: ' + (err.message || 'Error desconocido'));
         } finally {
             setCargando(false);
         }
     };
 
     // --- Acciones de Productos ---
-    const manejarGuardarProducto = (e) => {
+    const manejarGuardarProducto = async (e) => {
         e.preventDefault();
         setErrorProducto('');
         const datosFormulario = new FormData(e.target);
         
-        const id = datosFormulario.get('id');
+        const id = datosFormulario.get('id'); // Note: ID might be generated by backend if not provided, but here we seem to allow manual ID or it's from edit
         const nombre = datosFormulario.get('nombre');
         const precio = parseInt(datosFormulario.get('precio'));
         const categoria = datosFormulario.get('categoria');
@@ -89,50 +126,63 @@ const VistaAdmin = () => {
 
         try {
             if (editandoProducto) {
-                actualizarProducto(editandoProducto.id, {
-                    id,
+                await updateProduct(editandoProducto.id, {
                     nombre: nombre,
                     precio: precio,
                     categoria: categoria
                 });
             } else {
-                agregarProducto(id, nombre, precio, stock, categoria);
+                await createProduct({
+                    id, // Send ID if user provided it, otherwise backend should handle it
+                    nombre,
+                    precio,
+                    stock,
+                    categoria
+                });
             }
             setMostrarModalProducto(false);
             setEditandoProducto(null);
             cargarDatos();
         } catch (err) {
-            setErrorProducto(err.message);
+            setErrorProducto(err.message || 'Error al guardar producto');
         }
     };
 
     const manejarEliminarProducto = (id) => {
         const prod = productos.find(p => p.id === id);
+        if (usuarioActual && usuario.id === usuarioActual.id) {
+            mostrarNotificacion({ tipo: 'warning', titulo: 'Acción no permitida', mensaje: 'No puedes bloquear tu propia cuenta de administrador.' });
+            return;
+        }
         abrirConfirmacion({
             titulo: 'Eliminar Producto',
             mensaje: `¿Eliminar el producto ${prod ? `"${prod.nombre}"` : id}? Esta acción no se puede deshacer.`,
             severidad: 'warning',
-            alConfirmar: () => {
+            alConfirmar: async () => {
                 try {
-                    eliminarProducto(id);
+                    await deleteProduct(id);
                     cargarDatos();
                     mostrarNotificacion({ tipo: 'info', titulo: 'Producto eliminado', mensaje: 'Se eliminó correctamente.' });
                 } catch (err) {
-                    mostrarNotificacion({ tipo: 'error', titulo: 'Error', mensaje: err.message });
+                    mostrarNotificacion({ tipo: 'error', titulo: 'Error', mensaje: err.message || 'Error al eliminar' });
                 }
             }
         });
     };
 
     // --- Acciones de Usuario ---
-    const manejarGuardarUsuario = (e) => {
+    const manejarGuardarUsuario = async (e) => {
         e.preventDefault();
         setErrorUsuario('');
+        
+        if (creandoUsuario && (!validacionPassword.largo || !validacionPassword.mayuscula || !validacionPassword.numero || !validacionPassword.especial)) {
+            setErrorUsuario('La contraseña no cumple con los requisitos de seguridad.');
+            return;
+        }
+
         const datosFormulario = new FormData(e.target);
         
         try {
-            const csrf = localStorage.getItem(CLAVES_BD.CSRF_TOKEN) || '';
-            const admin = obtenerUsuarioActual();
             if (creandoUsuario) {
                 const id = datosFormulario.get('id') || null;
                 const nombre = datosFormulario.get('nombre');
@@ -141,36 +191,50 @@ const VistaAdmin = () => {
                 const rol = datosFormulario.get('rol');
                 const estado = datosFormulario.get('estado');
                 const telefono = datosFormulario.get('telefono');
-                adminCrearUsuario(admin.id, csrf, id, nombre, email, contrasena, rol, estado, telefono);
+                
+                await createUser({
+                    id: id || undefined, // Send undefined if empty so backend generates it
+                    nombre,
+                    email,
+                    contrasena,
+                    rol,
+                    estado,
+                    telefono
+                });
             } else {
-                const nuevoId = datosFormulario.get('id');
                 const nombre = datosFormulario.get('nombre');
                 const email = datosFormulario.get('email');
                 const rol = datosFormulario.get('rol');
-                const campos = { id: nuevoId, nombre, email, rol };
-                adminActualizarUsuario(admin.id, csrf, editandoUsuario.id, campos);
+                
+                await updateUser(editandoUsuario.id, {
+                    nombre,
+                    email,
+                    rol
+                });
             }
             setMostrarModalUsuario(false);
             setEditandoUsuario(null);
             setCreandoUsuario(false);
             cargarDatos();
         } catch (err) {
-            setErrorUsuario(err.message);
+            setErrorUsuario(err.message || 'Error al guardar usuario');
         }
     };
 
     const alternarEstadoUsuario = (usuario) => {
         const nuevoEstadoEsp = usuario.estado === 'bloqueado' ? 'activo' : 'bloqueado';
         
+        if (usuarioActual && usuario.id === usuarioActual.id) {
+            mostrarNotificacion({ tipo: 'warning', titulo: 'Acción no permitida', mensaje: 'No puedes eliminar tu propia cuenta.' });
+            return;
+        }
         abrirConfirmacion({
             titulo: 'Cambiar Estado de Usuario',
             mensaje: `¿Cambiar estado de ${usuario.nombre} a "${nuevoEstadoEsp}"?`,
             severidad: 'warning',
-            alConfirmar: () => {
+            alConfirmar: async () => {
                 try {
-                    const csrf = localStorage.getItem(CLAVES_BD.CSRF_TOKEN) || '';
-                    const admin = obtenerUsuarioActual();
-                    adminActualizarUsuario(admin.id, csrf, usuario.id, { estado: nuevoEstadoEsp });
+                    await updateUser(usuario.id, { estado: nuevoEstadoEsp });
                     cargarDatos();
                     mostrarNotificacion({ tipo: 'info', titulo: 'Estado actualizado', mensaje: 'El usuario fue actualizado.' });
                 } catch (err) {
@@ -185,15 +249,13 @@ const VistaAdmin = () => {
             titulo: 'Eliminar Usuario',
             mensaje: `¿Eliminar al usuario "${usuario.nombre}"? Esta acción no se puede deshacer.`,
             severidad: 'warning',
-            alConfirmar: () => {
+            alConfirmar: async () => {
                 try {
-                    const csrf = localStorage.getItem(CLAVES_BD.CSRF_TOKEN) || '';
-                    const admin = obtenerUsuarioActual();
-                    adminEliminarUsuario(admin.id, csrf, usuario.id);
+                    await deleteUser(usuario.id);
                     cargarDatos();
                     mostrarNotificacion({ tipo: 'info', titulo: 'Usuario eliminado', mensaje: 'Se eliminó correctamente.' });
                 } catch (err) {
-                    mostrarNotificacion({ tipo: 'error', titulo: 'Error', mensaje: err.message });
+                    mostrarNotificacion({ tipo: 'error', titulo: 'Error', mensaje: err.message || 'Error al eliminar usuario' });
                 }
             }
         });
@@ -215,7 +277,7 @@ const VistaAdmin = () => {
         setMostrarModalAsignacion(true);
     };
     
-    const manejarAsignarRepartidor = (e) => {
+    const manejarAsignarRepartidor = async (e) => {
         e.preventDefault();
         setErrorAsignacion('');
         if (!idRepartidorSeleccionado) {
@@ -223,14 +285,55 @@ const VistaAdmin = () => {
             return;
         }
         try {
-            asignarRepartidor(pedidoSeleccionado.id, idRepartidorSeleccionado);
+            await assignOrder(pedidoSeleccionado.id, idRepartidorSeleccionado);
             setMostrarModalAsignacion(false);
             setPedidoSeleccionado(null);
             setIdRepartidorSeleccionado('');
             cargarDatos();
         } catch (err) {
-            setErrorAsignacion(err.message);
+            setErrorAsignacion(err.message || 'Error al asignar repartidor');
         }
+    };
+
+    const abrirModalDetalle = (pedido) => {
+        setPedidoDetalle(pedido);
+        setNotaAdmin(pedido.notas || '');
+        setEstadoEdicion(pedido.estado);
+        setMostrarModalDetalle(true);
+    };
+
+    const manejarGuardarDetalle = async (e) => {
+        e.preventDefault();
+        try {
+            await updateOrderStatus(pedidoDetalle.id, { estado: estadoEdicion, notas: notaAdmin });
+            setMostrarModalDetalle(false);
+            setPedidoDetalle(null);
+            cargarDatos();
+            mostrarNotificacion({ tipo: 'info', titulo: 'Pedido actualizado', mensaje: 'Se actualizaron los detalles del pedido.' });
+        } catch (err) {
+            mostrarNotificacion({ tipo: 'error', titulo: 'Error', mensaje: err.message || 'Error al actualizar pedido' });
+        }
+    };
+
+    const manejarEliminarPedido = () => {
+        if (!pedidoDetalle) return;
+        
+        abrirConfirmacion({
+            titulo: 'Eliminar Pedido',
+            mensaje: `¿Eliminar definitivamente el pedido ${pedidoDetalle.id}? Esta acción no se puede deshacer.`,
+            severidad: 'warning',
+            alConfirmar: async () => {
+                try {
+                    await deleteOrder(pedidoDetalle.id);
+                    setMostrarModalDetalle(false);
+                    setPedidoDetalle(null);
+                    cargarDatos();
+                    mostrarNotificacion({ tipo: 'info', titulo: 'Pedido eliminado', mensaje: 'El pedido fue eliminado correctamente.' });
+                } catch (err) {
+                    mostrarNotificacion({ tipo: 'error', titulo: 'Error', mensaje: err.message || 'Error al eliminar pedido' });
+                }
+            }
+        });
     };
 
     return (
@@ -446,7 +549,13 @@ const VistaAdmin = () => {
                         <div>
                             <div className="d-flex justify-content-between align-items-center mb-4">
                                 <h3 className="mb-0">Gestión de Usuarios</h3>
-                                <button className="btn btn-primary" onClick={() => { setCreandoUsuario(true); setEditandoUsuario({}); setMostrarModalUsuario(true); }}>+ Nuevo Usuario</button>
+                                <button className="btn btn-primary" onClick={() => { 
+                                    setCreandoUsuario(true); 
+                                    setEditandoUsuario({}); 
+                                    setMostrarModalUsuario(true); 
+                                    setPasswordInput('');
+                                    setValidacionPassword({ largo: false, mayuscula: false, numero: false, especial: false });
+                                }}>+ Nuevo Usuario</button>
                             </div>
                             <div className="card border-0 shadow-sm mb-5">
                                 <div className="card-body p-4">
@@ -582,7 +691,11 @@ const VistaAdmin = () => {
                                 const OrdersTable = React.lazy(() => import('../components/OrdersTable'));
                                 return (
                                     <React.Suspense fallback={<div className="alert alert-info">Cargando pedidos...</div>}>
-                                        <OrdersTable onAsignar={(p) => abrirModalAsignacionRepartidor(p)} />
+                                        <OrdersTable 
+                                            data={pedidos} 
+                                            onAsignar={(p) => abrirModalAsignacionRepartidor(p)} 
+                                            onVerDetalles={(p) => abrirModalDetalle(p)}
+                                        />
                                     </React.Suspense>
                                 );
                             })()}
@@ -648,6 +761,124 @@ const VistaAdmin = () => {
                 </div>
             )}
 
+            {mostrarModalDetalle && pedidoDetalle && (
+                <div className="mc-modal-superposicion mc-aparicion">
+                    <div className="mc-modal-dialogo mc-deslizar-arriba" style={{ maxWidth: '800px', width: '100%' }}>
+                        <div className="mc-modal-encabezado">
+                            <h5 className="mc-modal-titulo">Detalle del Pedido {pedidoDetalle.id}</h5>
+                            <button
+                                type="button"
+                                className="btn-close"
+                                onClick={() => { setMostrarModalDetalle(false); setPedidoDetalle(null); }}
+                            />
+                        </div>
+                        <div className="mc-modal-cuerpo">
+                            <div className="row g-3 mb-3">
+                                <div className="col-md-6">
+                                    <p className="mb-1"><strong>Cliente:</strong> {pedidoDetalle.nombre_usuario || pedidoDetalle.nombreUsuario}</p>
+                                    <p className="mb-1"><strong>Teléfono:</strong> {pedidoDetalle.telefono_usuario || pedidoDetalle.telefonoUsuario || 'No registrado'}</p>
+                                    <p className="mb-1">
+                                        <strong>Dirección:</strong>{' '}
+                                        {typeof pedidoDetalle.direccion_envio === 'string'
+                                            ? pedidoDetalle.direccion_envio
+                                            : typeof pedidoDetalle.direccion_envio === 'object'
+                                            ? `${pedidoDetalle.direccion_envio.calle || ''} ${pedidoDetalle.direccion_envio.numero || ''}, ${pedidoDetalle.direccion_envio.comuna || ''}`
+                                            : pedidoDetalle.direccion || 'No registrada'}
+                                    </p>
+                                </div>
+                                <div className="col-md-6">
+                                    <p className="mb-1"><strong>Fecha creación:</strong> {pedidoDetalle.fecha_pedido ? new Date(pedidoDetalle.fecha_pedido).toLocaleString('es-CL') : 'N/A'}</p>
+                                    <p className="mb-1"><strong>Método de pago:</strong> {pedidoDetalle.metodo_pago || 'Sin especificar'}</p>
+                                    <p className="mb-1"><strong>Total:</strong> {aplicarFormatoMoneda(pedidoDetalle.total || 0)}</p>
+                                </div>
+                            </div>
+
+                            <div className="mb-3">
+                                <h6>Productos</h6>
+                                {pedidoDetalle.items && pedidoDetalle.items.length > 0 ? (
+                                    <div className="table-responsive">
+                                        <table className="table table-sm table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th>Producto</th>
+                                                    <th>Cantidad</th>
+                                                    <th>Precio unitario</th>
+                                                    <th>Subtotal</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {pedidoDetalle.items.map((item, idx) => (
+                                                    <tr key={idx}>
+                                                        <td>{item.nombre_producto || 'Producto'}</td>
+                                                        <td>{item.cantidad}</td>
+                                                        <td>{aplicarFormatoMoneda(item.precio_unitario)}</td>
+                                                        <td>{aplicarFormatoMoneda(item.precio_unitario * item.cantidad)}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <p className="text-muted">Sin productos registrados en este pedido.</p>
+                                )}
+                            </div>
+
+                            <form onSubmit={manejarGuardarDetalle}>
+                                <div className="row g-3">
+                                    <div className="col-md-4">
+                                        <label className="form-label">Estado</label>
+                                        <select
+                                            className="form-select"
+                                            value={estadoEdicion}
+                                            onChange={(e) => setEstadoEdicion(e.target.value)}
+                                        >
+                                            <option value="Pendiente">Pendiente</option>
+                                            <option value="Confirmado">Confirmado</option>
+                                            <option value="En Preparación">En Preparación</option>
+                                            <option value="En Camino">En Camino</option>
+                                            <option value="Entregado">Entregado</option>
+                                            <option value="Cancelado">Cancelado</option>
+                                            <option value="Reembolsado">Reembolsado</option>
+                                        </select>
+                                    </div>
+                                    <div className="col-md-8">
+                                        <label className="form-label">Notas administrativas</label>
+                                        <textarea
+                                            className="form-control"
+                                            rows="3"
+                                            value={notaAdmin}
+                                            onChange={(e) => setNotaAdmin(e.target.value)}
+                                            placeholder="Agregar notas internas sobre este pedido"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="d-flex justify-content-between align-items-center mt-4">
+                                    <button
+                                        type="button"
+                                        className="btn btn-outline-danger"
+                                        onClick={manejarEliminarPedido}
+                                    >
+                                        Eliminar pedido
+                                    </button>
+                                    <div className="d-flex gap-2">
+                                        <button
+                                            type="button"
+                                            className="btn btn-secondary"
+                                            onClick={() => { setMostrarModalDetalle(false); setPedidoDetalle(null); }}
+                                        >
+                                            Cerrar
+                                        </button>
+                                        <button type="submit" className="btn btn-primary">
+                                            Guardar cambios
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Modal Usuario */}
             {mostrarModalUsuario && (
                 <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
@@ -663,6 +894,7 @@ const VistaAdmin = () => {
                                     <div className="mb-3">
                                         <label className="form-label">ID</label>
                                         <input 
+                                            data-testid="input-id"
                                             type="text" 
                                             name="id" 
                                             className={`form-control ${errorIdUsuario ? 'is-invalid' : ''}`} 
@@ -691,16 +923,39 @@ const VistaAdmin = () => {
                                     </div>
                                     <div className="mb-3">
                                         <label className="form-label">Nombre</label>
-                                        <input type="text" name="nombre" className="form-control" defaultValue={creandoUsuario ? '' : editandoUsuario?.nombre} required />
+                                        <input data-testid="input-nombre" type="text" name="nombre" className="form-control" defaultValue={creandoUsuario ? '' : editandoUsuario?.nombre} required />
                                     </div>
                                     <div className="mb-3">
                                         <label className="form-label">Email</label>
-                                        <input type="email" name="email" className="form-control" defaultValue={creandoUsuario ? '' : editandoUsuario?.email} required />
+                                        <input data-testid="input-email" type="email" name="email" className="form-control" defaultValue={creandoUsuario ? '' : editandoUsuario?.email} required />
                                     </div>
                                     {creandoUsuario && (
                                         <div className="mb-3">
                                             <label className="form-label">Contraseña</label>
-                                            <input type="password" name="contrasena" className="form-control" required />
+                                            <input 
+                                                data-testid="input-contrasena"
+                                                type="password" 
+                                                name="contrasena" 
+                                                className={`form-control ${passwordInput && (!validacionPassword.largo || !validacionPassword.mayuscula || !validacionPassword.numero || !validacionPassword.especial) ? 'is-invalid' : (passwordInput ? 'is-valid' : '')}`} 
+                                                required 
+                                                onChange={(e) => verificarPassword(e.target.value)}
+                                            />
+                                            {creandoUsuario && (
+                                                <div className="mt-2 small">
+                                                    <div className={validacionPassword.largo ? 'text-success' : 'text-danger'}>
+                                                        {validacionPassword.largo ? '✓' : '✗'} Mínimo 8 caracteres
+                                                    </div>
+                                                    <div className={validacionPassword.mayuscula ? 'text-success' : 'text-danger'}>
+                                                        {validacionPassword.mayuscula ? '✓' : '✗'} Al menos una mayúscula
+                                                    </div>
+                                                    <div className={validacionPassword.numero ? 'text-success' : 'text-danger'}>
+                                                        {validacionPassword.numero ? '✓' : '✗'} Al menos un número
+                                                    </div>
+                                                    <div className={validacionPassword.especial ? 'text-success' : 'text-danger'}>
+                                                        {validacionPassword.especial ? '✓' : '✗'} Al menos un carácter especial
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                     <div className="mb-3">

@@ -25,20 +25,21 @@ export const getOrders = (opts = {}, signal) => {
     page: opts.page ?? 1,
     pageSize: opts.pageSize ?? 10,
     estado: opts.estado,
-    repartidor: opts.repartidor,
+    repartidorId: opts.repartidor,
     userId: opts.userId,
     q: opts.q,
   };
   return axiosClient.get('/orders', { params, signal });
 };
 
-export const updateOrderStatus = (id, estado, signal) => {
-  if (!id || !estado) {
-    const e = new Error('ID y estado requeridos');
+export const updateOrderStatus = (id, datos, signal) => {
+  if (!id || !datos) {
+    const e = new Error('ID y datos de estado requeridos');
     e.status = 400;
     throw e;
   }
-  return axiosClient.put(`/orders/${encodeURIComponent(id)}/status`, { estado }, { signal });
+  const payload = typeof datos === 'string' ? { estado: datos } : datos;
+  return axiosClient.put(`/orders/${encodeURIComponent(id)}/status`, payload, { signal });
 };
 
 export const assignOrder = (id, idRepartidor, signal) => {
@@ -57,4 +58,13 @@ export const cancelOrder = (id, signal) => {
     throw e;
   }
   return axiosClient.delete(`/orders/${encodeURIComponent(id)}/cancel`, { signal });
+};
+
+export const deleteOrder = (id, signal) => {
+  if (!id) {
+    const e = new Error('ID de pedido requerido');
+    e.status = 400;
+    throw e;
+  }
+  return axiosClient.delete(`/orders/${encodeURIComponent(id)}`, { signal });
 };

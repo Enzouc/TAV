@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { obtenerCarrito, guardarCarrito } from '../utils/almacenamiento';
-import { obtenerTodosLosProductos } from '../utils/producto';
 import { aplicarFormatoMoneda } from '../utils/datos';
 import ProductCard from '../components/ProductCard';
 import FiltrosCatalogo from '../components/FiltrosCatalogo';
 import ControlesPaginacion from '../components/ControlesPaginacion';
-import { fetchProducts } from '../services/productService';
+import { getProducts } from '../services/productsService';
 
-const VistaCatalogo = ({ data, apiUrl = null, initialView = 'grid', cardClassName = '', cardStyle = {} }) => {
+const VistaCatalogo = ({ data, initialView = 'grid', cardClassName = '', cardStyle = {} }) => {
     const [productos, setProductos] = useState([]);
     const [carrito, setCarrito] = useState([]);
     const [productoModal, setProductoModal] = useState(null);
@@ -29,16 +28,9 @@ const VistaCatalogo = ({ data, apiUrl = null, initialView = 'grid', cardClassNam
                 let fuente = null;
                 if (Array.isArray(data?.productos)) {
                     fuente = data.productos;
-                } else if (apiUrl) {
-                    const r = await fetchProducts(apiUrl);
-                    if (r.status === 'success') {
-                        fuente = r.data;
-                    } else {
-                        setError('Error al obtener productos: ' + (r.error?.message || 'desconocido'));
-                        fuente = obtenerTodosLosProductos();
-                    }
                 } else {
-                    fuente = obtenerTodosLosProductos();
+                    const res = await getProducts();
+                    fuente = Array.isArray(res) ? res : (res.data || []);
                 }
                 setProductos(fuente);
                 setCarrito(obtenerCarrito());

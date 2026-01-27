@@ -33,9 +33,9 @@ export const inicializarDatos = () => {
             {
                 id: '#ADMIN_ROOT',
                 nombre: 'Root Admin',
-                email: 'root@gasexpress.cl',
+                email: 'admin@tav.cl',
                 rol: 'admin',
-                contrasena: 'root',
+                contrasena: 'Root123!',
                 estado: 'activo',
                 telefono: '+56 9 0000 0000',
                 fechaRegistro: new Date().toLocaleString('es-CL')
@@ -45,7 +45,7 @@ export const inicializarDatos = () => {
                 nombre: 'Administrador',
                 email: 'admin@gasexpress.cl',
                 rol: 'admin',
-                contrasena: 'admin',
+                contrasena: 'Admin123!',
                 estado: 'activo',
                 telefono: '+56 9 0000 0001',
                 fechaRegistro: new Date().toLocaleString('es-CL')
@@ -55,7 +55,7 @@ export const inicializarDatos = () => {
                 nombre: 'Pedro El Rayo',
                 email: 'pedro@gasexpress.cl',
                 rol: 'repartidor',
-                contrasena: 'pedro',
+                contrasena: 'Pedro123!',
                 estado: 'activo',
                 telefono: '+56 9 1234 5678',
                 estadisticas: { entregas: 145, calificacion: 4.8 }
@@ -65,7 +65,7 @@ export const inicializarDatos = () => {
                 nombre: 'Juan Pérez',
                 email: 'juan@example.com',
                 rol: 'usuario',
-                contrasena: 'juan',
+                contrasena: 'Juan123!',
                 estado: 'activo',
                 telefono: '+56 9 8765 4321',
                 direccion: { calle: 'Av. Siempre Viva', numero: '123', region: 'Biobío', comuna: 'Concepción' }
@@ -75,7 +75,7 @@ export const inicializarDatos = () => {
                 nombre: 'Maria González',
                 email: 'maria@example.com',
                 rol: 'usuario',
-                contrasena: 'maria',
+                contrasena: 'Maria123!',
                 estado: 'bloqueado',
                 telefono: '+56 9 1111 2222',
                 direccion: { calle: 'Collao', numero: '456', region: 'Biobío', comuna: 'Concepción' }
@@ -88,9 +88,9 @@ export const inicializarDatos = () => {
             usuarios.unshift({
                 id: '#ADMIN_ROOT',
                 nombre: 'Root Admin',
-                email: 'root@gasexpress.cl',
+                email: 'admin@tav.cl',
                 rol: 'admin',
-                contrasena: 'root',
+                contrasena: 'Root123!',
                 estado: 'activo',
                 telefono: '+56 9 0000 0000'
             });

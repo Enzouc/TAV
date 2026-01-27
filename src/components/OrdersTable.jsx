@@ -19,12 +19,13 @@ import { aplicarFormatoMoneda } from '../utils/datos';
  * @property {Pedido[]} [data]
  * @property {string} [apiUrl]
  * @property {(p:Pedido)=>void} [onAsignar]
+ * @property {(p:Pedido)=>void} [onVerDetalles]
  * @property {number} [pageSize]
  */
 /**
  * @param {OrdersTableProps} props
  */
-const OrdersTable = ({ data, apiUrl, onAsignar, pageSize = 10 }) => {
+const OrdersTable = ({ data, apiUrl, onAsignar, onVerDetalles, pageSize = 10 }) => {
   const [pedidos, setPedidos] = useState([]);
   const [repartidores, setRepartidores] = useState([]);
   const [cargando, setCargando] = useState(false);
@@ -66,7 +67,7 @@ const OrdersTable = ({ data, apiUrl, onAsignar, pageSize = 10 }) => {
     cargar();
   }, [data, apiUrl]);
 
-  const estados = ['todos', 'Pendiente', 'En Camino', 'Entregado'];
+  const estados = ['todos', 'Pendiente', 'Confirmado', 'En Preparación', 'En Camino', 'Entregado', 'Cancelado', 'Reembolsado'];
   const repartidorOptions = useMemo(() => {
     const base = repartidores.map(d => ({ id: d.id, nombre: d.nombre }));
     return [{ id: 'todos', nombre: 'todos' }, ...base];
@@ -80,7 +81,8 @@ const OrdersTable = ({ data, apiUrl, onAsignar, pageSize = 10 }) => {
       }
       if (filtroTexto) {
         const t = filtroTexto.toLowerCase();
-        if (!String(p.id).toLowerCase().includes(t) && !String(p.nombreUsuario).toLowerCase().includes(t)) return false;
+        const nombre = String(p.nombreUsuario || p.nombre_usuario || '').toLowerCase();
+        if (!String(p.id).toLowerCase().includes(t) && !nombre.includes(t)) return false;
       }
       return true;
     });
@@ -153,7 +155,10 @@ const OrdersTable = ({ data, apiUrl, onAsignar, pageSize = 10 }) => {
         <table className="table table-hover align-middle">
           <thead>
             <tr>
-              <th role="button" onClick={() => toggleSort('id')}>ID Pedido</th>
+              <th role="button" onClick={() => toggleSort('id')}>ID</th>
+              <th role="button" onClick={() => toggleSort('fecha')}>Fecha</th>
+              <th role="button" onClick={() => toggleSort('nombreUsuario')}>Cliente</th>
+              <th>Productos</th>
               <th role="button" onClick={() => toggleSort('total')}>Total</th>
               <th role="button" onClick={() => toggleSort('estado')}>Estado</th>
               <th role="button" onClick={() => toggleSort('idRepartidor')}>Repartidor</th>
@@ -161,27 +166,41 @@ const OrdersTable = ({ data, apiUrl, onAsignar, pageSize = 10 }) => {
             </tr>
           </thead>
           <tbody>
-            {visibles.map(p => (
-              <tr key={p.id}>
-                <td>{p.id}</td>
-                <td>{aplicarFormatoMoneda(p.total)}</td>
-                <td>
-                  <span className={`badge ${p.estado === 'Entregado' ? 'bg-success' : p.estado === 'Pendiente' ? 'bg-warning text-dark' : 'bg-info text-dark'}`}>
-                    {p.estado}
-                  </span>
-                </td>
-                <td>
-                  {p.idRepartidor
-                    ? <span className="badge bg-success">{nombreRepartidor(p.idRepartidor) || 'Asignado'}</span>
-                    : <span className="badge bg-secondary">Sin asignar</span>}
-                </td>
-                <td>
-                  {!p.idRepartidor && (
-                    <button className="btn btn-sm btn-outline-primary" onClick={() => onAsignar && onAsignar(p)}>Asignar</button>
-                  )}
-                </td>
-              </tr>
-            ))}
+            {visibles.map(p => {
+              const fecha = p.fecha || p.fecha_pedido ? new Date(p.fecha || p.fecha_pedido).toLocaleString('es-CL') : 'N/A';
+              const cliente = p.nombreUsuario || p.nombre_usuario || 'Desconocido';
+              const productos = p.items && p.items.length > 0 
+                ? p.items.map(i => `${i.cantidad}x ${i.nombre_producto || 'Producto'}`).join(', ')
+                : 'Sin productos';
+
+              return (
+                <tr key={p.id}>
+                  <td><small>{p.id}</small></td>
+                  <td><small>{fecha}</small></td>
+                  <td>{cliente}</td>
+                  <td><small className="text-muted">{productos}</small></td>
+                  <td>{aplicarFormatoMoneda(p.total)}</td>
+                  <td>
+                    <span className={`badge ${p.estado === 'Entregado' ? 'bg-success' : p.estado === 'Pendiente' ? 'bg-warning text-dark' : 'bg-info text-dark'}`}>
+                      {p.estado}
+                    </span>
+                  </td>
+                  <td>
+                    {p.idRepartidor || p.id_repartidor
+                      ? <span className="badge bg-success">{nombreRepartidor(p.idRepartidor || p.id_repartidor) || 'Asignado'}</span>
+                      : <span className="badge bg-secondary">Sin asignar</span>}
+                  </td>
+                  <td>
+                    <div className="d-flex gap-1">
+                      <button className="btn btn-sm btn-info text-white" onClick={() => onVerDetalles && onVerDetalles(p)} title="Ver detalles y notas">📝</button>
+                      {(!p.idRepartidor && !p.id_repartidor) && (
+                        <button className="btn btn-sm btn-outline-primary" onClick={() => onAsignar && onAsignar(p)}>Asignar</button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

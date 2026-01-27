@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { iniciarSesion } from '../utils/autenticacion';
+import { login } from '../services/usersService';
+import { guardarUsuarioActual } from '../utils/almacenamiento';
 
 const VistaInicioSesion = () => {
     const navegar = useNavigate();
@@ -9,23 +10,26 @@ const VistaInicioSesion = () => {
     const [error, setError] = useState('');
     const [cargando, setCargando] = useState(false);
 
-    const manejarEnvio = (e) => {
+    const manejarEnvio = async (e) => {
         e.preventDefault();
         setError('');
         setCargando(true);
-        const resultado = iniciarSesion(email, contrasena);
-        if (resultado.exito) {
+        try {
+            const usuario = await login({ email, contrasena });
+            guardarUsuarioActual(usuario);
+            
             setTimeout(() => {
-                if (resultado.usuario.rol === 'repartidor') {
+                if (usuario.rol === 'repartidor') {
                     navegar('/repartidor');
-                } else if (resultado.usuario.rol === 'admin') {
+                } else if (usuario.rol === 'admin') {
                     navegar('/admin');
                 } else {
                     navegar('/');
                 }
             }, 300);
-        } else {
-            setError(resultado.mensaje);
+        } catch (err) {
+            console.error(err);
+            setError(err.response?.data?.message || err.message || 'Error al iniciar sesión');
             setCargando(false);
         }
     };
